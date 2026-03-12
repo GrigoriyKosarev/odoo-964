@@ -37,20 +37,32 @@ class AnalyticAccount(models.Model):
                 rec.account_business_unit_id,
                 rec.account_brand_id,
             ))
-            rec.is_grouped_account = filled >= 1
+            rec.is_grouped_account = filled >= 2
 
 
     @api.onchange('account_cluster_id', 'account_business_unit_id', 'account_brand_id')
     def _onchange_generate_name(self):
         for record in self:
-            if not (record.account_cluster_id or record.account_business_unit_id or record.account_brand_id):
+            # імʼя до onchange
+            # original_name = record._origin.name if record._origin else False
+
+            parts = []
+            if record.account_cluster_id:
+                parts.append(record.account_cluster_id.name)
+            if record.account_business_unit_id:
+                parts.append(record.account_business_unit_id.name)
+            if record.account_brand_id:
+                parts.append(record.account_brand_id.name)
+
+
+            if not parts:
                 return
 
-            parts = [
-                record.account_cluster_id.name if record.account_cluster_id else "Null",
-                record.account_business_unit_id.name if record.account_business_unit_id else "Null",
-                record.account_brand_id.name if record.account_brand_id else "Null",
-            ]
+            generated_name = " / ".join(parts)
 
-            record.name = " / ".join(parts)
+            # ✅ генеруємо ТІЛЬКИ якщо:
+            # 1) name пусте
+            # 2) або name == старому автозначенню
+            # if not record.name or record.name == original_name:
+            record.name = generated_name
 
