@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_budget_fact_report_tree" model="ir.ui.view">
+        <field name="name">budget.fact.report.tree</field>
+        <field name="model">budget.fact.report</field>
+        <field name="arch" type="xml">
+            <tree>
+<!--                <field name="budget_id"/>-->
+                <field name="analytic_account_id"/>
+                <field name="plan_id"/>
+                <field name="cluster_id"/>
+                <field name="business_unit_id"/>
+                <field name="brand_id"/>
+                <field name="account_id"/>
+                <field name="plan"/>
+                <field name="fact"/>
+                <field name="diff"/>
+
+                <button name="action_open_move_lines"
+                    type="object"
+                    string="Lines"
+                    icon="fa-external-link"/>
+
+<!--                <button name="action_open_move_list"-->
+<!--                    type="object"-->
+<!--                    string="Moves"-->
+<!--                    icon="fa-external-link"/>-->
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_budget_fact_report_pivot" model="ir.ui.view">
+        <field name="name">budget.fact.report.pivot</field>
+        <field name="model">budget.fact.report</field>
+        <field name="arch" type="xml">
+            <pivot string="Budget vs Fact">
+                <field name="analytic_account_id" type="row"/>
+                <field name="plan_id" type="col"/>
+                <field name="cluster_id" type="col"/>
+                <field name="business_unit_id" type="col"/>
+                <field name="brand_id" type="col"/>
+                <field name="account_id" type="col"/>
+                <field name="plan" type="measure"/>
+                <field name="fact" type="measure"/>
+                <field name="diff" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_budget_fact_report_search" model="ir.ui.view">
+        <field name="name">budget.fact.report.search</field>
+        <field name="model">budget.fact.report</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="analytic_account_id"/>
+                <field name="account_id"/>
+                <field name="plan_id"/>
+                <field name="cluster_id"/>
+                <field name="business_unit_id"/>
+                <field name="brand_id"/>
+
+                <filter string="Busines Unit is not set" name="business_unit_id"
+                    domain="[('business_unit_id', '=', False)]"/>
+
+                <group expand="0" string="Group By">
+                    <filter name="group_by_analytic"
+                            string="Analytic Account"
+                            context="{'group_by':'analytic_account_id'}"/>
+                    <filter name="group_by_account"
+                            string="Account"
+                            context="{'group_by':'account_id'}"/>
+                    <filter name="group_by_plan"
+                            string="Plan"
+                            context="{'group_by':'plan_id'}"/>
+                    <filter name="group_by_cluster"
+                            string="Cluster"
+                            context="{'group_by':'cluster_id'}"/>
+                    <filter name="group_by_bu"
+                            string="Business Unit"
+                            context="{'group_by':'business_unit_id'}"/>
+                    <filter name="group_by_brand"
+                            string="Brand"
+                            context="{'group_by':'brand_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_budget_fact_report" model="ir.actions.act_window">
+        <field name="name">Budget vs Fact</field>
+        <field name="res_model">budget.fact.report</field>
+        <field name="view_mode">tree,pivot</field>
+    </record>
+
+    <menuitem id="menu_budget_fact_report"
+              name="Budget vs Fact"
+              parent="account.account_reports_management_menu"
+              action="action_budget_fact_report"
+              sequence="100"/>
+
+</odoo>

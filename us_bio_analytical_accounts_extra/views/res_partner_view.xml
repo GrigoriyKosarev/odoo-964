@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <record id="us_bio_analytical_accounts_extra_res_partner_form_inherit" model="ir.ui.view">
+    <field name="name">res.partner.form.inherit.accounting.entries</field>
+    <field name="model">res.partner</field>
+    <field name="inherit_id" ref="account.view_partner_property_form"/>
+    <field name="arch" type="xml">
+        <xpath expr="//group[@name='accounting_entries']" position="inside">
+                <field name="analytic_distribution" widget="analytic_distribution" />
+        </xpath>
+
+
+
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+
+    <record id="us_bio_account_analytic_plan_form_view" model="ir.ui.view">
+        <field name="name">account.analytic.plan.form.inherit.us_bio_analytical_accounts_extra</field>
+        <field name="model">account.analytic.plan</field>
+        <field name="inherit_id" ref="analytic.account_analytic_plan_form_view"/>
+        <field name="priority">15</field>
+        <field name="arch" type="xml">
+            <xpath expr="//group/field[@name='company_id']" position="after">
+                <field name="type"/>
+            </xpath>
+        </field>
+    </record>
+
+
+
+
+
+</odoo>

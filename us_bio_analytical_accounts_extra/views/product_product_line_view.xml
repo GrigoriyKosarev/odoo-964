@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="view_product_product_line_form_inherit" model="ir.ui.view">
+        <field name="name">product.product.line.form.inherit</field>
+        <field name="model">product.product.line</field>
+        <field name="inherit_id" ref="us_product_extra.view_product_product_line_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="before">
+                <group>
+                    <field name="analytic_distribution"/>
+                    <field name="generate_distribution_model"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+
+
+
+
+
+
+</odoo>

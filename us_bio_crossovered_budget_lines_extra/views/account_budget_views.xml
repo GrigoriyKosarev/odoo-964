@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+Budgets
+-->
+
+  <record id="view_crossovered_budget_line_search_inherit_us" model="ir.ui.view">
+    <field name="name">crossovered.budget.lines.search.inherit.us</field>
+    <field name="model">crossovered.budget.lines</field>
+    <field name="inherit_id" ref="account_budget.view_crossovered_budget_line_search"/>
+    <field name="arch" type="xml">
+
+      <!-- 1) Додаємо поля у пошук (фільтрація через введення значень) -->
+      <xpath expr="//search" position="inside">
+        <separator/>
+        <field name="account_cluster_id"/>
+        <field name="account_business_unit_id"/>
+        <field name="account_brand_id"/>
+        <field name="is_grouped_account"/>
+        <field name="plan_type"/>
+      </xpath>
+
+      <!-- 2) Додаємо Group By -->
+      <xpath expr="//search" position="inside">
+        <separator/>
+        <group expand="0" string="Group By">
+          <filter string="Cluster" name="group_by_cluster"
+                  context="{'group_by': 'account_cluster_id'}"/>
+          <filter string="Business Unit" name="group_by_bu"
+                  context="{'group_by': 'account_business_unit_id'}"/>
+          <filter string="Brand" name="group_by_brand"
+                  context="{'group_by': 'account_brand_id'}"/>
+          <filter string="Grouped account" name="group_by_grouped"
+                  context="{'group_by': 'is_grouped_account'}"/>
+          <filter string="Plan type" name="group_by_plan_type"
+                  context="{'group_by': 'plan_type'}"/>
+        </group>
+      </xpath>
+
+      <!-- 3) (Опційно) “швидкі” фільтри по boolean -->
+      <xpath expr="//search" position="inside">
+        <separator/>
+        <filter string="Only grouped accounts" name="only_grouped_accounts"
+                domain="[('is_grouped_account', '=', True)]"/>
+        <filter string="Exclude grouped accounts" name="exclude_grouped_accounts"
+                domain="[('is_grouped_account', '=', False)]"/>
+      </xpath>
+
+    </field>
+  </record>
+   <record id="view_crossovered_budget_line_tree_inherit_us" model="ir.ui.view">
+        <field name="name">crossovered.budget.line.tree.inherit.us</field>
+        <field name="model">crossovered.budget.lines</field>
+
+        <field name="inherit_id" ref="account_budget.view_crossovered_budget_line_tree"/>
+
+        <field name="arch" type="xml">
+
+
+            <xpath expr="//field[@name='analytic_account_id']" position="after">
+                <field name="account_cluster_id"  optional="show" />
+                <field name="account_business_unit_id"  optional="show" />
+                <field name="account_brand_id"  optional="show"/>
+            </xpath>
+
+
+            <xpath expr="//field[@name='planned_amount']" position="before">
+                <field name="is_grouped_account"  optional="hide"/>
+                <field name="plan_type"  optional="hide"/>
+            </xpath>
+
+        </field>
+    </record>
+
+
+
+
+
+
+
+
+</odoo>
