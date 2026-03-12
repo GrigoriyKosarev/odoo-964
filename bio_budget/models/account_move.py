@@ -7,10 +7,78 @@ from odoo.exceptions import UserError
 class AccountMove(models.Model):
     _inherit = 'account.move'
 
+    def _find_or_create_combined_account(self, combined_plan, records,
+                                         cluster_acc, bus_acc, brand_acc):
+        """Find or create a combined analytic account for the General plan.
+
+        Uses hierarchical search:
+        1) company + partner
+        2) company only
+        3) global (no company, no partner)
+        If not found, creates a new global account.
+        """
+        AnalyticAccount = self.env["account.analytic.account"]
+
+        base_domain = [
+            ("account_cluster_id", "=", cluster_acc.id if cluster_acc else False),
+            ("account_business_unit_id", "=", bus_acc.id if bus_acc else False),
+            ("account_brand_id", "=", brand_acc.id if brand_acc else False),
+            ("is_grouped_account", "=", True),
+            ("plan_id", "=", combined_plan.id),
+        ]
+
+        combined_acc = False
+
+        # 1) Company + Partner
+        if records.company_id and records.partner_id:
+            acc = AnalyticAccount.search(base_domain + [
+                ("company_id", "=", records.company_id.id),
+                ("partner_id", "=", records.partner_id.id),
+            ], limit=1)
+            if acc:
+                combined_acc = acc
+
+        if not combined_acc:
+            # 2) Company only
+            if records.company_id:
+                acc = AnalyticAccount.search(base_domain + [
+                    ("company_id", "=", records.company_id.id),
+                    ("partner_id", "=", False),
+                ], limit=1)
+                if acc:
+                    combined_acc = acc
+
+        if not combined_acc:
+            # 3) Global
+            acc = AnalyticAccount.search(base_domain + [
+                ("company_id", "=", False),
+                ("partner_id", "=", False),
+            ], limit=1)
+            if acc:
+                combined_acc = acc
+
+        if not combined_acc:
+            c_name = cluster_acc.name if cluster_acc else "Null"
+            b_name = bus_acc.name if bus_acc else "Null"
+            r_name = brand_acc.name if brand_acc else "Null"
+            name = f"{c_name} / {b_name} / {r_name}"
+
+            combined_acc = AnalyticAccount.create({
+                "name": name,
+                "account_cluster_id": cluster_acc.id if cluster_acc else False,
+                "account_business_unit_id": bus_acc.id if bus_acc else False,
+                "account_brand_id": brand_acc.id if brand_acc else False,
+                "is_grouped_account": True,
+                "company_id": False,
+                "plan_id": combined_plan.id,
+                "partner_id": False,
+            })
+
+        return combined_acc
+
     def action_post(self):
         res = super().action_post()
 
-        AnalyticAccount = self.env["account.analytic.account"]
         AnalyticLine = self.env["account.analytic.line"]
         AnalyticPlan = self.env["account.analytic.plan"]
 
@@ -21,308 +89,199 @@ class AccountMove(models.Model):
         for records in self:
             for line in records.invoice_line_ids:
                 # ---------------------------
-                # 1. Групування
+                # 1. Групування аналітики за типом плану
                 # ---------------------------
                 grouped = {
                     "brand": [],
                     "business_unit": [],
                     "cluster": [],
                 }
-                cluster_source_line = None  # для копіювання
+                source_line = None
                 for analytic in line.analytic_line_ids:
-
                     account = analytic.account_id
 
-                    # 2. Ігноруємо груповані рахунки
                     if account.is_grouped_account:
                         continue
 
-                    plan_type_raw = analytic.plan_id.type  # наприклад 'Cluster'
+                    plan_type_raw = analytic.plan_id.type
                     if not plan_type_raw:
                         continue
-                    #     raise UserError("В рахунку " + account.name + " вибрано аналітичний план з пустим полем 'тип плану' ")
 
-                    plan_type = plan_type_raw.lower().replace(' ', '_')  # 'cluster'
+                    plan_type = plan_type_raw.lower().replace(' ', '_')
                     if plan_type in grouped:
                         grouped[plan_type].append((account, analytic.amount))
 
-                #     # зберігаємо перший cluster рядок для копіювання
-                #     if plan_type == "cluster" and cluster_source_line is None:
-                #         cluster_source_line = analytic
-                #
-                # # Обов'язково має бути джерело для копії
-                # if not cluster_source_line:
-                #     continue
+                    if source_line is None:
+                        source_line = analytic
 
-                # Списки для мультиплікації
                 clusters = grouped["cluster"]
                 bus = grouped["business_unit"]
                 brands = grouped["brand"]
 
-
-                # Якщо хоча б одна групи не порожні
+                # All 3 types filled — handled by us_bio_analytical_accounts_extra
                 if clusters and bus and brands:
                     continue
 
+                # None filled — nothing to do
                 if not (clusters or bus or brands):
                     continue
 
+                # No source line for copy_data — skip
+                if not source_line:
+                    continue
+
                 # ---------------------------
-                # 2. subtotal сума рядка
+                # 2. subtotal
                 # ---------------------------
                 subtotal = line.price_subtotal
-                # ---------------------------
-                # 3. Попереднє накопичення
-                # ---------------------------
 
+                # ---------------------------
+                # 3. Generate combinations
+                # ---------------------------
                 results = []
                 total_amount_calc = 0.0
 
-                # ---------------------------
-                # 4. Генерація всіх комбінацій
-                # ---------------------------
-
                 if clusters and bus:
-                    params = {
-                        "clusters": clusters,
-                        "bus": bus,
-                        "brands": brands,
-                        "subtotal": subtotal,
-                        "results": results,
-                        "total_amount_calc": total_amount_calc,
-                        "combined_plan": combined_plan,
-                        "records": records,
-                    }
-                    self.clusters_bus_combination(params)
-                    results = params['results']
-                    total_amount_calc = params['total_amount_calc']
+                    # Two types: Cluster x Business Unit, Brand = Null
+                    for c_acc, c_amt in clusters:
+                        c_pct = c_amt / subtotal if subtotal else 0
+                        for b_acc, b_amt in bus:
+                            b_pct = b_amt / subtotal if subtotal else 0
+                            combined_pct = c_pct * b_pct
+                            combined_amount = subtotal * combined_pct
+                            total_amount_calc += combined_amount
+
+                            combined_acc = self._find_or_create_combined_account(
+                                combined_plan, records, c_acc, b_acc, None)
+                            results.append({
+                                "account": combined_acc,
+                                "amount": combined_amount,
+                                "percent": combined_pct,
+                            })
+
                 elif clusters and brands:
-                    pass
+                    # Two types: Cluster x Brand, Business Unit = Null
+                    for c_acc, c_amt in clusters:
+                        c_pct = c_amt / subtotal if subtotal else 0
+                        for r_acc, r_amt in brands:
+                            r_pct = r_amt / subtotal if subtotal else 0
+                            combined_pct = c_pct * r_pct
+                            combined_amount = subtotal * combined_pct
+                            total_amount_calc += combined_amount
+
+                            combined_acc = self._find_or_create_combined_account(
+                                combined_plan, records, c_acc, None, r_acc)
+                            results.append({
+                                "account": combined_acc,
+                                "amount": combined_amount,
+                                "percent": combined_pct,
+                            })
+
                 elif bus and brands:
-                    pass
+                    # Two types: Business Unit x Brand, Cluster = Null
+                    for b_acc, b_amt in bus:
+                        b_pct = b_amt / subtotal if subtotal else 0
+                        for r_acc, r_amt in brands:
+                            r_pct = r_amt / subtotal if subtotal else 0
+                            combined_pct = b_pct * r_pct
+                            combined_amount = subtotal * combined_pct
+                            total_amount_calc += combined_amount
+
+                            combined_acc = self._find_or_create_combined_account(
+                                combined_plan, records, None, b_acc, r_acc)
+                            results.append({
+                                "account": combined_acc,
+                                "amount": combined_amount,
+                                "percent": combined_pct,
+                            })
+
                 elif clusters:
-                    pass
+                    # Single type: Cluster only
+                    for c_acc, c_amt in clusters:
+                        c_pct = c_amt / subtotal if subtotal else 0
+                        combined_amount = c_amt
+                        total_amount_calc += combined_amount
+
+                        combined_acc = self._find_or_create_combined_account(
+                            combined_plan, records, c_acc, None, None)
+                        results.append({
+                            "account": combined_acc,
+                            "amount": combined_amount,
+                            "percent": c_pct,
+                        })
+
                 elif bus:
-                    pass
+                    # Single type: Business Unit only
+                    for b_acc, b_amt in bus:
+                        b_pct = b_amt / subtotal if subtotal else 0
+                        combined_amount = b_amt
+                        total_amount_calc += combined_amount
+
+                        combined_acc = self._find_or_create_combined_account(
+                            combined_plan, records, None, b_acc, None)
+                        results.append({
+                            "account": combined_acc,
+                            "amount": combined_amount,
+                            "percent": b_pct,
+                        })
+
                 elif brands:
-                    pass
+                    # Single type: Brand only
+                    for r_acc, r_amt in brands:
+                        r_pct = r_amt / subtotal if subtotal else 0
+                        combined_amount = r_amt
+                        total_amount_calc += combined_amount
+
+                        combined_acc = self._find_or_create_combined_account(
+                            combined_plan, records, None, None, r_acc)
+                        results.append({
+                            "account": combined_acc,
+                            "amount": combined_amount,
+                            "percent": r_pct,
+                        })
 
                 # ---------------------------
-                # 6. Корекція округлення
+                # 4. Rounding correction
                 # ---------------------------
                 diff = subtotal - total_amount_calc
                 if results:
-                    results[-1]["amount"] += diff  # корекція останнього рядка
+                    results[-1]["amount"] += diff
 
                 # ---------------------------
-                # 7. Створення нових аналітичних рядків
+                # 5. Create analytic lines
                 # ---------------------------
-
-                base_vals = cluster_source_line.copy_data()[0]
+                base_vals = source_line.copy_data()[0]
                 for item in results:
-
                     acc = item["account"]
 
-                    # Перевірка чи рядок вже існує
                     existing_line = AnalyticLine.search([
                         ("move_line_id", "=", line.id),
                         ("account_id", "=", acc.id),
                     ], limit=1)
 
                     if existing_line:
-                        continue  # вже існує — пропускаємо
+                        continue
 
                     new_vals = base_vals.copy()
                     new_vals.update({
                         "account_id": acc.id,
                         "plan_id": combined_plan.id,
                         "amount": item["amount"],
-                        })
+                    })
 
                     AnalyticLine.create(new_vals)
 
-
-                # 1. Отримуємо поточний розподіл
+                # ---------------------------
+                # 6. Update analytic_distribution
+                # ---------------------------
                 existing_dist = line.analytic_distribution or {}
-
-                # 2. Копію в окремий dict (щоб не зіпсувати reference)
                 new_dist = existing_dist.copy()
 
-                # 3. Додаємо нові комбінації
                 for item in results:
                     acc = item["account"]
-                    pct = item["percent"] * 100  # у %
+                    pct = item["percent"] * 100
                     new_dist[str(acc.id)] = pct
 
-                # 4. Записуємо назад
                 line.analytic_distribution = new_dist
 
-
         return res
-
-    def clusters_bus_combination(self, params):
-        clusters = params['clusters']
-        bus = params['bus']
-        results = params['results']
-        subtotal = params['subtotal']
-        total_amount_calc = params['total_amount_calc']
-        records = params['records']
-        combined_plan = params['combined_plan']
-
-        AnalyticAccount = self.env["account.analytic.account"]
-
-        for c_acc, c_amt in clusters:
-            c_pct = c_amt / subtotal if subtotal else 0
-
-            for b_acc, b_amt in bus:
-                b_pct = b_amt / subtotal if subtotal else 0
-
-                # for r_acc, r_amt in brands:
-                #     r_pct = r_amt / subtotal if subtotal else 0
-
-                # Комбінований % (доля)
-                combined_pct = c_pct * b_pct
-
-                # Сума
-                combined_amount = subtotal * combined_pct
-                total_amount_calc += combined_amount
-                params["total_amount_calc"] = total_amount_calc
-
-                # ---------------------------
-                # 5. Знайти або створити комбінований рахунок
-                # ---------------------------
-                base_domain = [
-                    ("account_brand_id", "=", False),
-                    ("account_business_unit_id", "=", b_acc.id),
-                    ("account_cluster_id", "=", c_acc.id),
-                    ("is_grouped_account", "=", True),
-                    ("plan_id", "=", combined_plan.id),
-                ]
-                combined_acc = False
-
-                # 1) АР + Компанія + Клієнт
-                if records.company_id and records.partner_id:
-                    acc = AnalyticAccount.search(base_domain + [
-                        ("company_id", "=", records.company_id.id),
-                        ("partner_id", "=", records.partner_id.id),
-                    ], limit=1)
-                    if acc:
-                        combined_acc = acc
-
-                if not combined_acc:
-                    # 2) АР + Компанія
-                    if records.company_id:
-                        acc = AnalyticAccount.search(base_domain + [
-                            ("company_id", "=", records.company_id.id),
-                            ("partner_id", "=", False),
-                        ], limit=1)
-                        if acc:
-                            combined_acc = acc
-                if not combined_acc:
-                    # 3) АР (глобальний)
-                    acc = AnalyticAccount.search(base_domain + [
-                        ("company_id", "=", False),
-                        ("partner_id", "=", False),
-                    ], limit=1)
-                    if acc:
-                        combined_acc = acc
-
-                if not combined_acc:
-                    name = f"{c_acc.name} / {b_acc.name} / 'Null'"
-                    combined_acc = AnalyticAccount.create({
-                        "name": name,
-                        "account_brand_id": False,
-                        "account_business_unit_id": b_acc.id,
-                        "account_cluster_id": c_acc.id,
-                        "is_grouped_account": True,
-                        "company_id": False,
-                        "plan_id": combined_plan.id,
-                        "partner_id": False,
-                    })
-
-                results.append({
-                    "account": combined_acc,
-                    "amount": combined_amount,
-                    "percent": combined_pct,
-                })
-
-    def clusters_brands_combination(self, params):
-        clusters = params.clusters
-        brands = params.brands
-        results = params.results
-        subtotal = params.subtotal
-
-        # for c_acc, c_amt in clusters:
-        #     c_pct = c_amt / subtotal if subtotal else 0
-        #
-        #     for b_acc, b_amt in bus:
-        #         b_pct = b_amt / subtotal if subtotal else 0
-        #
-        #         for r_acc, r_amt in brands:
-        #             r_pct = r_amt / subtotal if subtotal else 0
-        #
-        #             # Комбінований % (доля)
-        #             combined_pct = c_pct * b_pct * r_pct
-        #
-        #             # Сума
-        #             combined_amount = subtotal * combined_pct
-        #             total_amount_calc += combined_amount
-        #
-        #             # ---------------------------
-        #             # 5. Знайти або створити комбінований рахунок
-        #             # ---------------------------
-        #             base_domain = [
-        #                 ("account_brand_id", "=", r_acc.id),
-        #                 ("account_business_unit_id", "=", b_acc.id),
-        #                 ("account_cluster_id", "=", c_acc.id),
-        #                 ("is_grouped_account", "=", True),
-        #                 ("plan_id", "=", combined_plan.id),
-        #             ]
-        #             combined_acc = False
-        #
-        #             # 1) АР + Компанія + Клієнт
-        #             if records.company_id and records.partner_id:
-        #                 acc = AnalyticAccount.search(base_domain + [
-        #                     ("company_id", "=", records.company_id.id),
-        #                     ("partner_id", "=", records.partner_id.id),
-        #                 ], limit=1)
-        #                 if acc:
-        #                     combined_acc = acc
-        #
-        #             if not combined_acc:
-        #                 # 2) АР + Компанія
-        #                 if records.company_id:
-        #                     acc = AnalyticAccount.search(base_domain + [
-        #                         ("company_id", "=", records.company_id.id),
-        #                         ("partner_id", "=", False),
-        #                     ], limit=1)
-        #                     if acc:
-        #                         combined_acc = acc
-        #             if not combined_acc:
-        #                 # 3) АР (глобальний)
-        #                 acc = AnalyticAccount.search(base_domain + [
-        #                     ("company_id", "=", False),
-        #                     ("partner_id", "=", False),
-        #                 ], limit=1)
-        #                 if acc:
-        #                     combined_acc = acc
-        #
-        #             if not combined_acc:
-        #                 name = f"{c_acc.name} / {b_acc.name} / {r_acc.name}"
-        #                 combined_acc = AnalyticAccount.create({
-        #                     "name": name,
-        #                     "account_brand_id": r_acc.id,
-        #                     "account_business_unit_id": b_acc.id,
-        #                     "account_cluster_id": c_acc.id,
-        #                     "is_grouped_account": True,
-        #                     "company_id": False,
-        #                     "plan_id": combined_plan.id,
-        #                     "partner_id": False,
-        #                 })
-        #
-        #             results.append({
-        #                 "account": combined_acc,
-        #                 "amount": combined_amount,
-        #                 "percent": combined_pct,
-        #             })
-
