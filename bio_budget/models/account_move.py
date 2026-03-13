@@ -111,7 +111,9 @@ class AccountMove(models.Model):
                     if plan_type in grouped:
                         grouped[plan_type].append((account, analytic.amount))
 
-                    if source_line is None:
+                    if (plan_type == "cluster" or
+                        plan_type == "business_unit" or
+                        plan_type == "brand") and source_line is None :
                         source_line = analytic
 
                 clusters = grouped["cluster"]
