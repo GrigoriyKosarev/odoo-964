@@ -60,6 +60,9 @@
                 <field name="business_unit_id"/>
                 <field name="brand_id"/>
 
+                <filter string="Plan: General" name="filter_plan_general"
+                    domain="[('plan_id.name', 'ilike', 'General')]"/>
+
                 <filter string="Busines Unit is not set" name="business_unit_id"
                     domain="[('business_unit_id', '=', False)]"/>
 
@@ -91,6 +94,7 @@
         <field name="name">Budget vs Fact</field>
         <field name="res_model">budget.fact.report</field>
         <field name="view_mode">tree,pivot</field>
+        <field name="context">{'search_default_filter_plan_general': 1}</field>
     </record>
 
     <menuitem id="menu_budget_fact_report"
