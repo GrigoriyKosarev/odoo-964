@@ -19,21 +19,28 @@ class AccountMoveLine(models.Model):
             move = line.move_id
 
             # ---------------------------
-            # 0. Remove old General analytic lines and clean distribution
+            # 0. Clean General accounts from analytic_distribution
+            #    (Odoo will automatically remove orphaned analytic lines)
             # ---------------------------
-            old_general_lines = AnalyticLine.search([
-                ("move_line_id", "=", line.id),
-                ("account_id.is_grouped_account", "=", True),
-                ("plan_id", "=", combined_plan.id),
-            ])
-            if old_general_lines:
-                existing_dist = line.analytic_distribution or {}
-                new_dist = {
-                    k: v for k, v in existing_dist.items()
-                    if int(k) not in old_general_lines.mapped("account_id").ids
-                }
-                line.analytic_distribution = new_dist
-                old_general_lines.unlink()
+            existing_dist = line.analytic_distribution or {}
+            if existing_dist:
+                account_ids = []
+                for k in existing_dist:
+                    try:
+                        account_ids.append(int(k))
+                    except (ValueError, TypeError):
+                        continue
+                if account_ids:
+                    grouped_accounts = AnalyticAccount.search([
+                        ("id", "in", account_ids),
+                        ("is_grouped_account", "=", True),
+                    ])
+                    if grouped_accounts:
+                        new_dist = {
+                            k: v for k, v in existing_dist.items()
+                            if int(k) not in grouped_accounts.ids
+                        }
+                        line.analytic_distribution = new_dist
 
             # ---------------------------
             # 1. Group analytics by plan type
