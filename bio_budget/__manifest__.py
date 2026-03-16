@@ -11,6 +11,7 @@
                 'us_bio_analytical_accounts_extra',
                 ],
     'data': ['security/ir.model.access.csv',
+             'data/account_move_line_action.xml',
              'reports/crossovered_budget_report.xml',
              ],
     'assets': {
