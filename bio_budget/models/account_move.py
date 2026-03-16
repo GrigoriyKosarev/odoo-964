@@ -77,6 +77,7 @@ class AccountMove(models.Model):
         return combined_acc
 
     def action_post(self):
+        AnalyticAccount = self.env["account.analytic.account"]
         AnalyticLine = self.env["account.analytic.line"]
         AnalyticPlan = self.env["account.analytic.plan"]
 
@@ -85,23 +86,32 @@ class AccountMove(models.Model):
             raise UserError("Аналітичний план 'General' не знайдено.")
 
         # ---------------------------
-        # 0. Remove old General analytic lines BEFORE super (re-post after Reset to Draft)
+        # 0. Clean General accounts from analytic_distribution BEFORE super
+        #    (prevents standard Odoo from re-creating stale General analytic lines on re-post)
         # ---------------------------
         for records in self:
             for line in records.invoice_line_ids:
-                old_general_lines = AnalyticLine.search([
-                    ("move_line_id", "=", line.id),
-                    ("account_id.is_grouped_account", "=", True),
-                    ("plan_id", "=", combined_plan.id),
+                existing_dist = line.analytic_distribution or {}
+                if not existing_dist:
+                    continue
+                account_ids = []
+                for k in existing_dist:
+                    try:
+                        account_ids.append(int(k))
+                    except (ValueError, TypeError):
+                        continue
+                if not account_ids:
+                    continue
+                grouped_accounts = AnalyticAccount.search([
+                    ("id", "in", account_ids),
+                    ("is_grouped_account", "=", True),
                 ])
-                if old_general_lines:
-                    existing_dist = line.analytic_distribution or {}
+                if grouped_accounts:
                     new_dist = {
                         k: v for k, v in existing_dist.items()
-                        if int(k) not in old_general_lines.mapped("account_id").ids
+                        if int(k) not in grouped_accounts.ids
                     }
                     line.analytic_distribution = new_dist
-                    old_general_lines.unlink()
 
         res = super().action_post()
 
