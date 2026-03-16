@@ -63,8 +63,12 @@
                 <filter string="Plan: General" name="filter_plan_general"
                     domain="[('plan_id.name', 'ilike', 'General')]"/>
 
+                <filter string="Cluster is not set" name="cluster_id"
+                    domain="[('cluster_id', '=', False)]"/>
                 <filter string="Busines Unit is not set" name="business_unit_id"
                     domain="[('business_unit_id', '=', False)]"/>
+                <filter string="Brand is not set" name="brand_id"
+                    domain="[('brand_id', '=', False)]"/>
 
                 <group expand="0" string="Group By">
                     <filter name="group_by_analytic"
