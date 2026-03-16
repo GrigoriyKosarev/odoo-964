@@ -77,8 +77,6 @@ class AccountMove(models.Model):
         return combined_acc
 
     def action_post(self):
-        res = super().action_post()
-
         AnalyticLine = self.env["account.analytic.line"]
         AnalyticPlan = self.env["account.analytic.plan"]
 
@@ -86,18 +84,17 @@ class AccountMove(models.Model):
         if not combined_plan:
             raise UserError("Аналітичний план 'General' не знайдено.")
 
+        # ---------------------------
+        # 0. Remove old General analytic lines BEFORE super (re-post after Reset to Draft)
+        # ---------------------------
         for records in self:
             for line in records.invoice_line_ids:
-                # ---------------------------
-                # 0. Remove old General analytic lines (re-post after Reset to Draft)
-                # ---------------------------
                 old_general_lines = AnalyticLine.search([
                     ("move_line_id", "=", line.id),
                     ("account_id.is_grouped_account", "=", True),
                     ("plan_id", "=", combined_plan.id),
                 ])
                 if old_general_lines:
-                    # Clean analytic_distribution
                     existing_dist = line.analytic_distribution or {}
                     new_dist = {
                         k: v for k, v in existing_dist.items()
@@ -106,6 +103,10 @@ class AccountMove(models.Model):
                     line.analytic_distribution = new_dist
                     old_general_lines.unlink()
 
+        res = super().action_post()
+
+        for records in self:
+            for line in records.invoice_line_ids:
                 # ---------------------------
                 # 1. Групування аналітики за типом плану
                 # ---------------------------
