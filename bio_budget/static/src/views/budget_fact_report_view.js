@@ -48,17 +48,14 @@ export class budgetFactReportViewController extends ListController {
     }
 
     async onDateFilterApply() {
-        const domain = [...this.env.searchModel.domain];
+        const context = Object.assign({}, this.props.context);
         if (this.dateFilter.dateFrom) {
-            domain.push(["create_date", ">=", this.dateFilter.dateFrom + " 00:00:00"]);
+            context.date_from = this.dateFilter.dateFrom;
         }
         if (this.dateFilter.dateTo) {
-            domain.push(["create_date", "<=", this.dateFilter.dateTo + " 23:59:59"]);
+            context.date_to = this.dateFilter.dateTo;
         }
-        if (this.dateFilter.taskId) {
-            domain.push(["id", "=", this.dateFilter.taskId]);
-        }
-        await this.model.root.load({ domain });
+        await this.model.root.load({ context });
         this.model.notify();
     }
 
@@ -66,7 +63,10 @@ export class budgetFactReportViewController extends ListController {
         this.dateFilter.dateFrom = "";
         this.dateFilter.dateTo = "";
         this.dateFilter.taskId = 0;
-        await this.model.root.load({ domain: this.env.searchModel.domain });
+        const context = Object.assign({}, this.props.context);
+        delete context.date_from;
+        delete context.date_to;
+        await this.model.root.load({ context });
         this.model.notify();
     }
 
