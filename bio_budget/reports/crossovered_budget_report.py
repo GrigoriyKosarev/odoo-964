@@ -1,6 +1,9 @@
 import re
+import logging
 
 from odoo import api, models, fields, tools
+
+_logger = logging.getLogger(__name__)
 
 
 class BudgetFactReport(models.Model):
@@ -93,6 +96,10 @@ class BudgetFactReport(models.Model):
 
     def _apply_date_context(self):
         """Rebuild VIEW if date_from/date_to present in context."""
+        _logger.info("=== [PY] Full context keys: %s", list(self.env.context.keys()))
+        _logger.info("=== [PY] date_from=%s, date_to=%s",
+                      self.env.context.get('date_from'),
+                      self.env.context.get('date_to'))
         date_from = self.env.context.get('date_from')
         date_to = self.env.context.get('date_to')
         if date_from or date_to:
@@ -107,7 +114,14 @@ class BudgetFactReport(models.Model):
             self._rebuild_view()
 
     @api.model
+    def web_search_read(self, domain=None, fields=None, offset=0, limit=None, order=None, count_limit=None):
+        _logger.info("=== [PY] web_search_read CALLED")
+        self._apply_date_context()
+        return super().web_search_read(domain, fields, offset, limit, order, count_limit)
+
+    @api.model
     def search_read(self, domain=None, fields=None, offset=0, limit=None, order=None):
+        _logger.info("=== [PY] search_read CALLED")
         self._apply_date_context()
         return super().search_read(domain, fields, offset, limit, order)
 

@@ -55,6 +55,9 @@ export class budgetFactReportViewController extends ListController {
         if (this.dateFilter.dateTo) {
             context.date_to = this.dateFilter.dateTo;
         }
+        console.log("=== [JS] onDateFilterApply context:", JSON.stringify(context));
+        console.log("=== [JS] dateFilter state:", JSON.stringify(this.dateFilter));
+        console.log("=== [JS] props.context:", JSON.stringify(this.props.context));
         await this.model.root.load({ context });
         this.model.notify();
     }
@@ -66,6 +69,7 @@ export class budgetFactReportViewController extends ListController {
         const context = Object.assign({}, this.props.context);
         delete context.date_from;
         delete context.date_to;
+        console.log("=== [JS] onDateFilterClear context:", JSON.stringify(context));
         await this.model.root.load({ context });
         this.model.notify();
     }
