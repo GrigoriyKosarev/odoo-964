@@ -5,7 +5,7 @@
         <field name="name">budget.fact.report.tree</field>
         <field name="model">budget.fact.report</field>
         <field name="arch" type="xml">
-            <tree>
+            <tree js_class="budget_fact_report_view">
 <!--                <field name="budget_id"/>-->
                 <field name="analytic_account_id"/>
                 <field name="plan_id"/>
