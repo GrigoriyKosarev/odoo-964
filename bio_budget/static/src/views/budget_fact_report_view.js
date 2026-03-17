@@ -49,6 +49,16 @@ const DateFilterMixin = (superclass) => class extends superclass {
         this.dateFilter.dateTo = ev.target.value || "";
     }
 
+    async _reloadModel() {
+        // PivotModel uses model.load() directly; ListModel uses model.root.load()
+        if (this.model.root && typeof this.model.root.load === "function") {
+            await this.model.root.load();
+        } else {
+            await this.model.load(this.model.searchParams || {});
+        }
+        this.model.notify();
+    }
+
     async onDateFilterApply() {
         console.log("=== [JS] onDateFilterApply:", this.dateFilter.dateFrom, this.dateFilter.dateTo);
         await this.orm.call(
@@ -57,8 +67,7 @@ const DateFilterMixin = (superclass) => class extends superclass {
             [],
             { date_from: this.dateFilter.dateFrom || false, date_to: this.dateFilter.dateTo || false }
         );
-        await this.model.root.load();
-        this.model.notify();
+        await this._reloadModel();
     }
 
     async onDateFilterClear() {
@@ -72,8 +81,7 @@ const DateFilterMixin = (superclass) => class extends superclass {
             [],
             { date_from: false, date_to: false }
         );
-        await this.model.root.load();
-        this.model.notify();
+        await this._reloadModel();
     }
 };
 
