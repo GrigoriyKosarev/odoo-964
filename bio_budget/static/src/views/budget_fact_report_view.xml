@@ -69,45 +69,46 @@
 <!--        </xpath>-->
     </t>
 
-    <!-- Розширюємо шаблон кнопок pivot view -->
-    <t t-name="bio_budget.budgetFactReportPivotView.Buttons" t-inherit="web.PivotView.Buttons" t-inherit-mode="primary">
-        <xpath expr="//div[hasclass('o_pivot_buttons')]" position="after">
-            <div class="d-flex align-items-center gap-2 ms-2 mt-2">
-                <label class="mb-0 fw-bold">Дата з:</label>
-                <input type="date" class="form-control form-control-sm" style="width: auto;"
-                       t-att-value="dateFilter.dateFrom"
-                       t-on-change="onDateFromChanged" />
-                <label class="mb-0 fw-bold">по:</label>
-                <input type="date" class="form-control form-control-sm" style="width: auto;"
-                       t-att-value="dateFilter.dateTo"
-                       t-on-change="onDateToChanged" />
-                <label class="mb-0 fw-bold">Задача:</label>
-                <div class="input-group input-group-sm" style="width: auto;">
-                    <input type="text" class="form-control" style="min-width: 150px;"
-                           t-att-value="dateFilter.taskName"
-                           placeholder="-- Всі --"
-                           readonly="1"
-                           t-on-click="onOpenTaskModal" />
-                    <button class="btn btn-outline-secondary" type="button"
-                            t-if="dateFilter.taskId"
-                            t-on-click="onClearTask">
-                        ✕
-                    </button>
-                    <button class="btn btn-outline-secondary" type="button"
-                            t-on-click="onOpenTaskModal">
-                        ▼
-                    </button>
-                </div>
-                <button class="btn btn-sm btn-primary"
-                        t-on-click="onDateFilterApply">
-                    Фільтрувати
+    <!-- Кнопки pivot view: оригінальні + дат-фільтр -->
+    <t t-name="bio_budget.budgetFactReportPivotView.Buttons" owl="1">
+        <!-- Включаємо стандартні кнопки pivot -->
+        <t t-call="web.PivotView.Buttons"/>
+        <!-- Додаємо дат-фільтр -->
+        <div class="d-flex align-items-center gap-2 ms-2 mt-2">
+            <label class="mb-0 fw-bold">Дата з:</label>
+            <input type="date" class="form-control form-control-sm" style="width: auto;"
+                   t-att-value="dateFilter.dateFrom"
+                   t-on-change="onDateFromChanged" />
+            <label class="mb-0 fw-bold">по:</label>
+            <input type="date" class="form-control form-control-sm" style="width: auto;"
+                   t-att-value="dateFilter.dateTo"
+                   t-on-change="onDateToChanged" />
+            <label class="mb-0 fw-bold">Задача:</label>
+            <div class="input-group input-group-sm" style="width: auto;">
+                <input type="text" class="form-control" style="min-width: 150px;"
+                       t-att-value="dateFilter.taskName"
+                       placeholder="-- Всі --"
+                       readonly="1"
+                       t-on-click="onOpenTaskModal" />
+                <button class="btn btn-outline-secondary" type="button"
+                        t-if="dateFilter.taskId"
+                        t-on-click="onClearTask">
+                    ✕
                 </button>
-                <button class="btn btn-sm btn-outline-secondary"
-                        t-on-click="onDateFilterClear">
-                    Скинути
+                <button class="btn btn-outline-secondary" type="button"
+                        t-on-click="onOpenTaskModal">
+                    ▼
                 </button>
             </div>
-        </xpath>
+            <button class="btn btn-sm btn-primary"
+                    t-on-click="onDateFilterApply">
+                Фільтрувати
+            </button>
+            <button class="btn btn-sm btn-outline-secondary"
+                    t-on-click="onDateFilterClear">
+                Скинути
+            </button>
+        </div>
     </t>
 
 </templates>
