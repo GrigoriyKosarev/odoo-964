@@ -31,13 +31,18 @@ class BudgetFactReport(models.Model):
         self._rebuild_view()
 
     def _rebuild_view(self, date_from=None, date_to=None):
+        where_plan = ""
         where_fact = ""
         params = []
         if date_from:
+            where_plan += " AND cbl.date_from >= %s"
             where_fact += " AND aal.date >= %s"
             params.append(date_from)
+            params.append(date_from)
         if date_to:
+            where_plan += " AND cbl.date_to <= %s"
             where_fact += " AND aal.date <= %s"
+            params.append(date_to)
             params.append(date_to)
 
         tools.drop_view_if_exists(self.env.cr, self._table)
@@ -66,7 +71,7 @@ class BudgetFactReport(models.Model):
                 FROM crossovered_budget_lines cbl
                 LEFT JOIN account_budget_rel abr
                     ON cbl.general_budget_id = abr.budget_id
-                WHERE cbl.planned_amount > 0
+                WHERE cbl.planned_amount > 0 %s
 
                 UNION
 
@@ -82,7 +87,7 @@ class BudgetFactReport(models.Model):
             ) t
             left join account_analytic_account aaa on aaa.id = t.analytic_account_id
             GROUP BY analytic_account_id, account_id, aaa.plan_id, aaa.account_cluster_id, aaa.account_business_unit_id, aaa.account_brand_id
-        """ % (self._table, where_fact)
+        """ % (self._table, where_plan, where_fact)
 
         self.env.cr.execute(query, params)
 
