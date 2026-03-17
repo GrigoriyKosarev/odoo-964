@@ -34,7 +34,7 @@
         <field name="name">budget.fact.report.pivot</field>
         <field name="model">budget.fact.report</field>
         <field name="arch" type="xml">
-            <pivot string="Budget vs Fact">
+            <pivot string="Budget vs Fact" js_class="budget_fact_report_pivot_view">
                 <field name="analytic_account_id" type="row"/>
                 <field name="plan_id" type="col"/>
                 <field name="cluster_id" type="col"/>
