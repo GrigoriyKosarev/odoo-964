@@ -15,6 +15,10 @@
              'reports/crossovered_budget_report.xml',
              ],
     'assets': {
+        'web.assets_backend': [
+            'bio_budget/static/src/views/budget_fact_report_view.js',
+            'bio_budget/static/src/views/budget_fact_report_view.xml',
+        ],
     },
     'auto_install': False,
 }
