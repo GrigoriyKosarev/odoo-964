@@ -5,7 +5,7 @@
     <t t-name="bio_budget.budgetFactReportView.Buttons" t-inherit="web.ListView.Buttons" t-inherit-mode="primary">
         <!-- primary = створюємо НОВИЙ шаблон на основі існуючого -->
 
-        <xpath expr="//div[hasclass('o_list_buttons')]" position="after">
+        <xpath expr="//div[hasclass('o_list_buttons')]" position="inside">
             <div class="d-flex align-items-center gap-2 ms-2 mt-2">
                 <label class="mb-0 fw-bold">Дата з:</label>
                 <input type="date" class="form-control form-control-sm" style="width: auto;"
