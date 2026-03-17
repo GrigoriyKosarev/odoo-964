@@ -36,17 +36,19 @@ class BudgetFactReport(models.Model):
     def _rebuild_view(self, date_from=None, date_to=None):
         where_plan = ""
         where_fact = ""
-        params = []
+        params_plan = []
+        params_fact = []
         if date_from:
             where_plan += " AND cbl.date_from >= %s"
             where_fact += " AND aal.date >= %s"
-            params.append(date_from)
-            params.append(date_from)
+            params_plan.append(date_from)
+            params_fact.append(date_from)
         if date_to:
             where_plan += " AND cbl.date_to <= %s"
             where_fact += " AND aal.date <= %s"
-            params.append(date_to)
-            params.append(date_to)
+            params_plan.append(date_to)
+            params_fact.append(date_to)
+        params = params_plan + params_fact
 
         tools.drop_view_if_exists(self.env.cr, self._table)
 
