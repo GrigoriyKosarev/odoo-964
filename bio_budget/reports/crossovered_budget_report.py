@@ -107,9 +107,9 @@ class BudgetFactReport(models.Model):
             self._rebuild_view()
 
     @api.model
-    def web_search_read(self, domain, specification, offset=0, limit=None, order=None, count_limit=None):
+    def web_search_read(self, domain=None, fields=None, offset=0, limit=None, order=None, count_limit=None):
         self._apply_date_context()
-        return super().web_search_read(domain, specification, offset, limit, order, count_limit)
+        return super().web_search_read(domain, fields, offset, limit, order, count_limit)
 
     @api.model
     def search_read(self, domain=None, fields=None, offset=0, limit=None, order=None):
