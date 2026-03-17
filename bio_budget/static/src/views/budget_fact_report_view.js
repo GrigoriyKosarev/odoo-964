@@ -3,11 +3,13 @@
 import { registry } from "@web/core/registry";
 import { listView } from "@web/views/list/list_view";
 import { ListController } from "@web/views/list/list_controller";
+import { pivotView } from "@web/views/pivot/pivot_view";
+import { PivotController } from "@web/views/pivot/pivot_controller";
 import { useService } from "@web/core/utils/hooks";
 const { useState } = owl;
 
-// Створюємо НОВИЙ контролер на основі стандартного
-export class budgetFactReportViewController extends ListController {
+// Mixin з логікою дат-фільтра (щоб не дублювати між list і pivot)
+const DateFilterMixin = (superclass) => class extends superclass {
     setup() {
         super.setup();
         this.notification = useService("notification");
@@ -73,16 +75,27 @@ export class budgetFactReportViewController extends ListController {
         await this.model.root.load();
         this.model.notify();
     }
-
-}
-
-// Створюємо новий об'єкт view на основі стандартного listView
-export const budgetFactReportView = {
-    ...listView,                          // Копіюємо все зі стандартного
-    Controller: budgetFactReportViewController,       // Замінюємо контролер на наш
-    buttonTemplate: "bio_budget.budgetFactReportView.Buttons",  // Шаблон кнопок
-    //              ↑ цей підхід через buttonTemplate — рекомендований в Odoo 16
 };
 
-// Реєструємо нашу view під назвою "todo_list_view"
+// List контролер
+export class budgetFactReportViewController extends DateFilterMixin(ListController) {}
+
+// Pivot контролер
+export class budgetFactReportPivotController extends DateFilterMixin(PivotController) {}
+
+// List view
+export const budgetFactReportView = {
+    ...listView,
+    Controller: budgetFactReportViewController,
+    buttonTemplate: "bio_budget.budgetFactReportView.Buttons",
+};
+
+// Pivot view
+export const budgetFactReportPivotView = {
+    ...pivotView,
+    Controller: budgetFactReportPivotController,
+    buttonTemplate: "bio_budget.budgetFactReportPivotView.Buttons",
+};
+
 registry.category("views").add("budget_fact_report_view", budgetFactReportView);
+registry.category("views").add("budget_fact_report_pivot_view", budgetFactReportPivotView);
