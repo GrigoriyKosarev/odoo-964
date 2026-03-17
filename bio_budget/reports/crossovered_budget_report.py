@@ -130,19 +130,16 @@ class BudgetFactReport(models.Model):
 
     @api.model
     def web_search_read(self, domain=None, fields=None, offset=0, limit=None, order=None, count_limit=None):
-        _logger.info("=== [PY] web_search_read CALLED")
-        self._apply_date_context()
+        _logger.info("=== [PY] web_search_read CALLED (no rebuild)")
         return super().web_search_read(domain, fields, offset, limit, order, count_limit)
 
     @api.model
     def search_read(self, domain=None, fields=None, offset=0, limit=None, order=None):
-        _logger.info("=== [PY] search_read CALLED")
-        self._apply_date_context()
+        _logger.info("=== [PY] search_read CALLED (no rebuild)")
         return super().search_read(domain, fields, offset, limit, order)
 
     @api.model
     def read_group(self, domain, fields, groupby, offset=0, limit=None, orderby=False, lazy=True):
-        self._apply_date_context()
         return super().read_group(domain, fields, groupby, offset, limit, orderby, lazy)
 
     def action_open_move_lines(self):
