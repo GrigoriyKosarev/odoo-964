@@ -48,17 +48,14 @@ export class budgetFactReportViewController extends ListController {
     }
 
     async onDateFilterApply() {
-        const context = Object.assign({}, this.props.context);
-        if (this.dateFilter.dateFrom) {
-            context.date_from = this.dateFilter.dateFrom;
-        }
-        if (this.dateFilter.dateTo) {
-            context.date_to = this.dateFilter.dateTo;
-        }
-        console.log("=== [JS] onDateFilterApply context:", JSON.stringify(context));
-        console.log("=== [JS] dateFilter state:", JSON.stringify(this.dateFilter));
-        console.log("=== [JS] props.context:", JSON.stringify(this.props.context));
-        await this.model.root.load({ context });
+        console.log("=== [JS] onDateFilterApply:", this.dateFilter.dateFrom, this.dateFilter.dateTo);
+        await this.orm.call(
+            "budget.fact.report",
+            "apply_date_filter",
+            [],
+            { date_from: this.dateFilter.dateFrom || false, date_to: this.dateFilter.dateTo || false }
+        );
+        await this.model.root.load();
         this.model.notify();
     }
 
@@ -66,11 +63,14 @@ export class budgetFactReportViewController extends ListController {
         this.dateFilter.dateFrom = "";
         this.dateFilter.dateTo = "";
         this.dateFilter.taskId = 0;
-        const context = Object.assign({}, this.props.context);
-        delete context.date_from;
-        delete context.date_to;
-        console.log("=== [JS] onDateFilterClear context:", JSON.stringify(context));
-        await this.model.root.load({ context });
+        console.log("=== [JS] onDateFilterClear");
+        await this.orm.call(
+            "budget.fact.report",
+            "apply_date_filter",
+            [],
+            { date_from: false, date_to: false }
+        );
+        await this.model.root.load();
         this.model.notify();
     }
 

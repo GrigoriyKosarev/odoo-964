@@ -114,6 +114,21 @@ class BudgetFactReport(models.Model):
             self._rebuild_view()
 
     @api.model
+    def apply_date_filter(self, date_from=False, date_to=False):
+        """Called from JS to rebuild the SQL VIEW with date filters."""
+        _logger.info("=== [PY] apply_date_filter CALLED: date_from=%s, date_to=%s", date_from, date_to)
+        date_re = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+        if date_from and not date_re.match(date_from):
+            date_from = False
+        if date_to and not date_re.match(date_to):
+            date_to = False
+        self._rebuild_view(
+            date_from=date_from or None,
+            date_to=date_to or None,
+        )
+        return True
+
+    @api.model
     def web_search_read(self, domain=None, fields=None, offset=0, limit=None, order=None, count_limit=None):
         _logger.info("=== [PY] web_search_read CALLED")
         self._apply_date_context()
