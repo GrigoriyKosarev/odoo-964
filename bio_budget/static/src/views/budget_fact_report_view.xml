@@ -136,7 +136,8 @@
                                 <button type="button"
                                         class="list-group-item list-group-item-action"
                                         t-att-class="{'active': dateFilter.budgetId === budget.id}"
-                                        t-on-click="() => this.onSelectBudget(budget.id, budget.name)">
+                                        t-on-click="() => this.onSelectBudget(budget.id, budget.name,
+                                                                    budget.date_from, budget.date_to)">
                                     <t t-esc="budget.name"/>
                                 </button>
                             </t>
