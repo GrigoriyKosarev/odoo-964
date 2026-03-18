@@ -106,7 +106,7 @@ const DateFilterMixin = (superclass) => class extends superclass {
             "budget.fact.report",
             "apply_date_filter",
             [],
-            { date_from: dateFrom || false, date_to: dateTo || false }
+            { date_from: dateFrom || false, date_to: dateTo || false, budget_id: this.dateFilter.budgetId || false }
         );
         console.log(LOG_PREFIX, "  apply_date_filter returned:", rpcResult);
 

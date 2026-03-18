@@ -45,12 +45,15 @@ class BudgetFactReport(models.Model):
     def init(self):
         self._rebuild_view()
 
-    def _rebuild_view(self, date_from=None, date_to=None):
-        _logger.info("_rebuild_view called: date_from=%s, date_to=%s", date_from, date_to)
+    def _rebuild_view(self, date_from=None, date_to=None, budget_id=None):
+        _logger.info("_rebuild_view called: date_from=%s, date_to=%s, budget_id=%s", date_from, date_to, budget_id)
         where_plan = ""
         where_fact = ""
         params_plan = []
         params_fact = []
+        if budget_id:
+            where_plan += " AND cbl.crossovered_budget_id = %s"
+            params_plan.append(int(budget_id))
         if date_from:
             where_plan += " AND cbl.date_from >= %s"
             where_fact += " AND aal.date >= %s"
@@ -121,9 +124,9 @@ class BudgetFactReport(models.Model):
         _logger.info("_rebuild_view: view rebuilt OK, row_count=%d", row_count)
 
     @api.model
-    def apply_date_filter(self, date_from=False, date_to=False):
-        """Called from JS to rebuild the SQL VIEW with date filters."""
-        _logger.info("apply_date_filter: date_from=%s, date_to=%s", date_from, date_to)
+    def apply_date_filter(self, date_from=False, date_to=False, budget_id=False):
+        """Called from JS to rebuild the SQL VIEW with date/budget filters."""
+        _logger.info("apply_date_filter: date_from=%s, date_to=%s, budget_id=%s", date_from, date_to, budget_id)
         date_re = re.compile(r'^\d{4}-\d{2}-\d{2}$')
         if date_from and not date_re.match(date_from):
             date_from = False
@@ -132,6 +135,7 @@ class BudgetFactReport(models.Model):
         self._rebuild_view(
             date_from=date_from or None,
             date_to=date_to or None,
+            budget_id=budget_id or None,
         )
         return True
 
