@@ -18,12 +18,12 @@
                 <label class="mb-0 fw-bold">Budget:</label>
                 <div class="input-group input-group-sm" style="width: auto;">
                     <input type="text" class="form-control" style="min-width: 150px;"
-                           t-att-value="dateFilter.taskName"
+                           t-att-value="dateFilter.budgetName"
                            placeholder="-- All --"
                            readonly="1"
                            t-on-click="onOpenBudgetModal" />
                     <button class="btn btn-outline-secondary" type="button"
-                            t-if="dateFilter.taskId"
+                            t-if="dateFilter.budgetId"
                             t-on-click="onClearBudget">
                         ✕
                     </button>
@@ -40,6 +40,37 @@
                         t-on-click="onDateFilterClear">
                     Cancel
                 </button>
+            </div>
+        </xpath>
+
+        <xpath expr="//div[hasclass('o_list_buttons')]" position="after">
+            <div t-if="budgetModal.show" class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Select Budget</h5>
+                            <button type="button" class="btn-close"
+                                    t-on-click="onCloseBudgetModal"/>
+                        </div>
+                        <div class="modal-body p-0">
+                            <div class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
+                                <button type="button"
+                                        class="list-group-item list-group-item-action"
+                                        t-on-click="() => this.onSelectBudget(0, '')">
+                                    -- All --
+                                </button>
+                                <t t-foreach="budgetOptions.list" t-as="budget" t-key="budget.id">
+                                    <button type="button"
+                                            class="list-group-item list-group-item-action"
+                                            t-att-class="{'active': dateFilter.budgetId === budget.id}"
+                                            t-on-click="() => this.onSelectBudget(budget.id, budget.name)">
+                                        <t t-esc="budget.name"/>
+                                    </button>
+                                </t>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </xpath>
     </t>
@@ -61,17 +92,17 @@
             <label class="mb-0 fw-bold">Budget:</label>
             <div class="input-group input-group-sm" style="width: auto;">
                 <input type="text" class="form-control" style="min-width: 150px;"
-                       t-att-value="dateFilter.taskName"
+                       t-att-value="dateFilter.budgetName"
                        placeholder="-- All --"
                        readonly="1"
-                       t-on-click="onOpenTaskModal" />
+                       t-on-click="onOpenBudgetModal" />
                 <button class="btn btn-outline-secondary" type="button"
-                        t-if="dateFilter.taskId"
-                        t-on-click="onClearTask">
+                        t-if="dateFilter.budgetId"
+                        t-on-click="onClearBudget">
                     ✕
                 </button>
                 <button class="btn btn-outline-secondary" type="button"
-                        t-on-click="onOpenTaskModal">
+                        t-on-click="onOpenBudgetModal">
                     ▼
                 </button>
             </div>
@@ -83,6 +114,35 @@
                     t-on-click="onDateFilterClear">
                 Cancel
             </button>
+        </div>
+        <!-- Budget selection modal -->
+        <div t-if="budgetModal.show" class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Select Budget</h5>
+                        <button type="button" class="btn-close"
+                                t-on-click="onCloseBudgetModal"/>
+                    </div>
+                    <div class="modal-body p-0">
+                        <div class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
+                            <button type="button"
+                                    class="list-group-item list-group-item-action"
+                                    t-on-click="() => this.onSelectBudget(0, '')">
+                                -- All --
+                            </button>
+                            <t t-foreach="budgetOptions.list" t-as="budget" t-key="budget.id">
+                                <button type="button"
+                                        class="list-group-item list-group-item-action"
+                                        t-att-class="{'active': dateFilter.budgetId === budget.id}"
+                                        t-on-click="() => this.onSelectBudget(budget.id, budget.name)">
+                                    <t t-esc="budget.name"/>
+                                </button>
+                            </t>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </t>
 

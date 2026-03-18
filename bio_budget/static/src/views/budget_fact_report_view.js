@@ -73,7 +73,8 @@ const DateFilterMixin = (superclass) => class extends superclass {
     async onDateFilterClear() {
         this.dateFilter.dateFrom = "";
         this.dateFilter.dateTo = "";
-        this.dateFilter.taskId = 0;
+        this.dateFilter.budgetId = 0;
+        this.dateFilter.budgetName = "";
         console.log("=== [JS] onDateFilterClear");
         await this.orm.call(
             "budget.fact.report",
