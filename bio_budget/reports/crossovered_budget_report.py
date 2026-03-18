@@ -11,7 +11,6 @@ class BudgetFactReport(models.Model):
     _description = "Budget vs Fact Report"
     _auto = False
 
-    # budget_id = fields.Many2one('account.budget.post', 'Budgetary Position')
     analytic_account_id = fields.Many2one(
         "account.analytic.account",
         string="Analytic Account"
@@ -96,29 +95,10 @@ class BudgetFactReport(models.Model):
 
         self.env.cr.execute(query, params)
 
-    def _apply_date_context(self):
-        """Rebuild VIEW if date_from/date_to present in context."""
-        _logger.info("=== [PY] Full context keys: %s", list(self.env.context.keys()))
-        _logger.info("=== [PY] date_from=%s, date_to=%s",
-                      self.env.context.get('date_from'),
-                      self.env.context.get('date_to'))
-        date_from = self.env.context.get('date_from')
-        date_to = self.env.context.get('date_to')
-        if date_from or date_to:
-            # Validate date format to prevent injection
-            date_re = re.compile(r'^\d{4}-\d{2}-\d{2}$')
-            if date_from and not date_re.match(date_from):
-                date_from = None
-            if date_to and not date_re.match(date_to):
-                date_to = None
-            self._rebuild_view(date_from=date_from, date_to=date_to)
-        else:
-            self._rebuild_view()
-
     @api.model
     def apply_date_filter(self, date_from=False, date_to=False):
         """Called from JS to rebuild the SQL VIEW with date filters."""
-        _logger.info("=== [PY] apply_date_filter CALLED: date_from=%s, date_to=%s", date_from, date_to)
+        _logger.info("apply_date_filter: date_from=%s, date_to=%s", date_from, date_to)
         date_re = re.compile(r'^\d{4}-\d{2}-\d{2}$')
         if date_from and not date_re.match(date_from):
             date_from = False
@@ -129,20 +109,6 @@ class BudgetFactReport(models.Model):
             date_to=date_to or None,
         )
         return True
-
-    @api.model
-    def web_search_read(self, domain=None, fields=None, offset=0, limit=None, order=None, count_limit=None):
-        _logger.info("=== [PY] web_search_read CALLED (no rebuild)")
-        return super().web_search_read(domain, fields, offset, limit, order, count_limit)
-
-    @api.model
-    def search_read(self, domain=None, fields=None, offset=0, limit=None, order=None):
-        _logger.info("=== [PY] search_read CALLED (no rebuild)")
-        return super().search_read(domain, fields, offset, limit, order)
-
-    @api.model
-    def read_group(self, domain, fields, groupby, offset=0, limit=None, orderby=False, lazy=True):
-        return super().read_group(domain, fields, groupby, offset, limit, orderby, lazy)
 
     def action_open_move_lines(self):
         self.ensure_one()
@@ -163,21 +129,3 @@ class BudgetFactReport(models.Model):
             'view_mode': 'tree',
             'domain': domain,
         }
-
-    # def action_open_move_list(self):
-    #     self.ensure_one()
-    #
-    #     domain = [
-    #         ('account_id', '=', self.account_id.id),
-    #     ]
-    #
-    #     if self.analytic_account_id:
-    #         domain.append(('analytic_account_id', '=', self.analytic_account_id.id))
-    #
-    #     return {
-    #         'type': 'ir.actions.act_window',
-    #         'name': 'Journal Entries',
-    #         'res_model': 'account.move',
-    #         'view_mode': 'tree',
-    #         'domain': domain,
-    #     }

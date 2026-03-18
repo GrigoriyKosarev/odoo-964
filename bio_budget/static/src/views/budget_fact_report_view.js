@@ -8,38 +8,15 @@ import { PivotController } from "@web/views/pivot/pivot_controller";
 import { useService } from "@web/core/utils/hooks";
 const { useState } = owl;
 
-const STORAGE_KEY = "budget_fact_report_date_filter";
-
 // Mixin з логікою дат-фільтра (щоб не дублювати між list і pivot)
 const DateFilterMixin = (superclass) => class extends superclass {
     setup() {
         super.setup();
         this.notification = useService("notification");
         this.orm = useService("orm");
-        // Restore date filter state from sessionStorage (preserved across page reloads)
-        const saved = sessionStorage.getItem(STORAGE_KEY);
-        if (saved) {
-            const s = JSON.parse(saved);
-            this.dateFilter = useState({
-                dateFrom: s.dateFrom || "",
-                dateTo: s.dateTo || "",
-                budgetId: s.budgetId || 0,
-                budgetName: s.budgetName || "",
-            });
-        } else {
-            this.dateFilter = useState({ dateFrom: "", dateTo: "", budgetId: 0, budgetName: "" });
-        }
+        this.dateFilter = useState({ dateFrom: "", dateTo: "", budgetId: 0, budgetName: "" });
         this.budgetOptions = useState({ list: [] });
         this.budgetModal = useState({ show: false });
-    }
-
-    _saveDateFilter() {
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
-            dateFrom: this.dateFilter.dateFrom,
-            dateTo: this.dateFilter.dateTo,
-            budgetId: this.dateFilter.budgetId,
-            budgetName: this.dateFilter.budgetName,
-        }));
     }
 
     async onOpenBudgetModal() {
@@ -74,15 +51,30 @@ const DateFilterMixin = (superclass) => class extends superclass {
         this.dateFilter.dateTo = ev.target.value || "";
     }
 
-    async onDateFilterApply() {
+    async _rebuildAndReload(dateFrom, dateTo) {
+        // 1. Rebuild SQL VIEW on server
         await this.orm.call(
             "budget.fact.report",
             "apply_date_filter",
             [],
-            { date_from: this.dateFilter.dateFrom || false, date_to: this.dateFilter.dateTo || false }
+            { date_from: dateFrom || false, date_to: dateTo || false }
         );
-        this._saveDateFilter();
-        window.location.reload();
+        // 2. Re-fetch data from the rebuilt VIEW, preserving current search domain/filters
+        if (this.model.searchParams) {
+            await this.model.load(this.model.searchParams);
+        } else if (this.model.root && typeof this.model.root.load === "function") {
+            await this.model.root.load();
+        }
+        this.model.notify();
+    }
+
+    async onDateFilterApply() {
+        try {
+            await this._rebuildAndReload(this.dateFilter.dateFrom, this.dateFilter.dateTo);
+            this.notification.add("Filter applied", { type: "success" });
+        } catch (e) {
+            this.notification.add(`Filter error: ${e.message || String(e)}`, { type: "danger", sticky: true });
+        }
     }
 
     async onDateFilterClear() {
@@ -90,14 +82,11 @@ const DateFilterMixin = (superclass) => class extends superclass {
         this.dateFilter.dateTo = "";
         this.dateFilter.budgetId = 0;
         this.dateFilter.budgetName = "";
-        await this.orm.call(
-            "budget.fact.report",
-            "apply_date_filter",
-            [],
-            { date_from: false, date_to: false }
-        );
-        sessionStorage.removeItem(STORAGE_KEY);
-        window.location.reload();
+        try {
+            await this._rebuildAndReload(false, false);
+        } catch (e) {
+            this.notification.add(`Clear error: ${e.message || String(e)}`, { type: "danger", sticky: true });
+        }
     }
 };
 
