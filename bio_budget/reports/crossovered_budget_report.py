@@ -30,6 +30,13 @@ class BudgetFactReport(models.Model):
     fact = fields.Float(string="Budget Fact")
     diff = fields.Float(string="Diff")
 
+    @api.model
+    def web_search_read(self, domain=None, specification=None, **kwargs):
+        _logger.info("web_search_read called: domain=%s, kwargs=%s", domain, kwargs)
+        result = super().web_search_read(domain=domain, specification=specification, **kwargs)
+        _logger.info("web_search_read result: length=%s", result.get('length', '?'))
+        return result
+
     def init(self):
         self._rebuild_view()
 
