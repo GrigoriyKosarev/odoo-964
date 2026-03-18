@@ -52,10 +52,15 @@ const DateFilterMixin = (superclass) => class extends superclass {
     }
 
     async _reloadModel() {
-        // Trigger the standard Odoo reload flow via SearchModel._notify().
-        // This preserves all active search filters (domain, groupBy, etc.)
-        // because SearchModel re-sends the full searchParams to the model.
-        this.env.searchModel._notify();
+        // Get current search params from SearchModel to preserve active filters
+        // (e.g. "Plan: General" default filter domain)
+        const sm = this.env.searchModel;
+        await this.model.load({
+            domain: sm.domain,
+            context: sm.context,
+            groupBy: sm.groupBy,
+        });
+        this.model.notify();
     }
 
     async onDateFilterApply() {
