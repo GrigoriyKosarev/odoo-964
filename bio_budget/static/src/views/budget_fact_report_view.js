@@ -26,9 +26,11 @@ const DateFilterMixin = (superclass) => class extends superclass {
         this.budgetModal.show = true;
     }
 
-    onSelectBudget(id, name) {
+    onSelectBudget(id, name, date_from, date_to) {
         this.dateFilter.budgetId = id;
         this.dateFilter.budgetName = name;
+        this.dateFilter.dateFrom = date_from;
+        this.dateFilter.dateTo = date_to;
         this.budgetModal.show = false;
     }
 
