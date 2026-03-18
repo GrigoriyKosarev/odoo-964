@@ -14,31 +14,31 @@ const DateFilterMixin = (superclass) => class extends superclass {
         super.setup();
         this.notification = useService("notification");
         this.orm = useService("orm");
-        this.dateFilter = useState({ dateFrom: "", dateTo: "", taskId: 0, taskName: "" });
-        this.taskOptions = useState({ list: [] });
-        this.taskModal = useState({ show: false });
+        this.dateFilter = useState({ dateFrom: "", dateTo: "", budgetId: 0, budgetName: "" });
+        this.budgetOptions = useState({ list: [] });
+        this.budgetModal = useState({ show: false });
     }
 
-    async onOpenTaskModal() {
-        this.taskOptions.list = await this.orm.searchRead(
-            "account.analytic.plan", [], ["name"], { order: "name" }
+    async onOpenBudgetModal() {
+        this.budgetOptions.list = await this.orm.searchRead(
+            "crossovered.budget", [], ["name"], { order: "name" }
         );
-        this.taskModal.show = true;
+        this.budgetModal.show = true;
     }
 
-    onSelectTask(id, name) {
-        this.dateFilter.taskId = id;
-        this.dateFilter.taskName = name;
-        this.taskModal.show = false;
+    onSelectBudget(id, name) {
+        this.dateFilter.budgetId = id;
+        this.dateFilter.budgetName = name;
+        this.budgetModal.show = false;
     }
 
-    onClearTask() {
-        this.dateFilter.taskId = 0;
-        this.dateFilter.taskName = "";
+    onClearBudget() {
+        this.dateFilter.budgetId = 0;
+        this.dateFilter.budgetName = "";
     }
 
-    onCloseTaskModal() {
-        this.taskModal.show = false;
+    onCloseBudgetModal() {
+        this.budgetModal.show = false;
     }
 
     onDateFromChanged(ev) {
