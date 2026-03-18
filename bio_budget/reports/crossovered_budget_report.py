@@ -16,6 +16,7 @@ class BudgetFactReport(models.Model):
         string="Analytic Account"
     )
     plan_id = fields.Many2one('account.analytic.plan', 'Plan')
+    plan_name = fields.Char(string="Plan Name")
     cluster_id = fields.Many2one('account.analytic.account', 'Cluster')
     business_unit_id = fields.Many2one('account.analytic.account', 'Business Unit')
     brand_id = fields.Many2one('account.analytic.account', 'Brand')
@@ -61,6 +62,7 @@ class BudgetFactReport(models.Model):
                 row_number() OVER() AS id,
                 analytic_account_id,
                 aaa.plan_id as plan_id,
+                aap.name as plan_name,
                 aaa.account_cluster_id  as cluster_id,
                 aaa.account_business_unit_id as business_unit_id,
                 aaa.account_brand_id as brand_id,
@@ -93,8 +95,9 @@ class BudgetFactReport(models.Model):
                 WHERE 1=1 %s
 
             ) t
-            left join account_analytic_account aaa on aaa.id = t.analytic_account_id
-            GROUP BY analytic_account_id, account_id, aaa.plan_id, aaa.account_cluster_id, aaa.account_business_unit_id, aaa.account_brand_id
+            LEFT JOIN account_analytic_account aaa ON aaa.id = t.analytic_account_id
+            LEFT JOIN account_analytic_plan aap ON aap.id = aaa.plan_id
+            GROUP BY analytic_account_id, account_id, aaa.plan_id, aap.name, aaa.account_cluster_id, aaa.account_business_unit_id, aaa.account_brand_id
         """ % (self._table, where_plan, where_fact)
 
         _logger.info("_rebuild_view: executing SQL (length=%d)", len(query))

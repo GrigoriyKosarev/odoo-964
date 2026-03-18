@@ -61,7 +61,7 @@
                 <field name="brand_id"/>
 
                 <filter string="Plan: General" name="filter_plan_general"
-                    domain="[('plan_id.name', '=', 'General')]"/>
+                    domain="[('plan_name', '=', 'General')]"/>
 
                 <filter string="Cluster is not set" name="cluster_id"
                     domain="[('cluster_id', '=', False)]"/>
