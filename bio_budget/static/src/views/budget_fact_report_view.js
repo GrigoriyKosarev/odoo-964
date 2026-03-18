@@ -64,8 +64,7 @@ const DateFilterMixin = (superclass) => class extends superclass {
         // 1. SearchModel re-applies default filters (search_default_filter_plan_general)
         // 2. Model loads fresh data from the rebuilt SQL VIEW
         // Pass date filter state as context so it's restored after reload.
-        const actionId = this.props.action?.id;
-        await this.actionService.doAction(actionId, {
+        await this.actionService.doAction("bio_budget.action_budget_fact_report", {
             clearBreadcrumbs: true,
             additionalContext: {
                 budget_date_from: this.dateFilter.dateFrom || false,
