@@ -71,7 +71,7 @@ class BudgetFactReport(models.Model):
         query = """
             CREATE OR REPLACE VIEW %s AS
             SELECT
-                row_number() OVER() AS id,
+                row_number() OVER(ORDER BY analytic_account_id, account_id, aaa.plan_id) AS id,
                 analytic_account_id,
                 aaa.plan_id as plan_id,
                 aap.name as plan_name,
