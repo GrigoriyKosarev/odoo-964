@@ -33,6 +33,7 @@ class BudgetFactReport(models.Model):
         self._rebuild_view()
 
     def _rebuild_view(self, date_from=None, date_to=None):
+        _logger.info("_rebuild_view called: date_from=%s, date_to=%s", date_from, date_to)
         where_plan = ""
         where_fact = ""
         params_plan = []
@@ -48,6 +49,9 @@ class BudgetFactReport(models.Model):
             params_plan.append(date_to)
             params_fact.append(date_to)
         params = params_plan + params_fact
+
+        _logger.info("_rebuild_view: where_plan='%s', where_fact='%s', params=%s",
+                      where_plan, where_fact, params)
 
         tools.drop_view_if_exists(self.env.cr, self._table)
 
@@ -93,7 +97,13 @@ class BudgetFactReport(models.Model):
             GROUP BY analytic_account_id, account_id, aaa.plan_id, aaa.account_cluster_id, aaa.account_business_unit_id, aaa.account_brand_id
         """ % (self._table, where_plan, where_fact)
 
+        _logger.info("_rebuild_view: executing SQL (length=%d)", len(query))
         self.env.cr.execute(query, params)
+
+        # Verify: count rows in rebuilt view
+        self.env.cr.execute("SELECT count(*) FROM %s" % self._table)
+        row_count = self.env.cr.fetchone()[0]
+        _logger.info("_rebuild_view: view rebuilt OK, row_count=%d", row_count)
 
     @api.model
     def apply_date_filter(self, date_from=False, date_to=False):
