@@ -8,23 +8,38 @@ import { PivotController } from "@web/views/pivot/pivot_controller";
 import { useService } from "@web/core/utils/hooks";
 const { useState } = owl;
 
+const STORAGE_KEY = "budget_fact_report_date_filter";
+
 // Mixin з логікою дат-фільтра (щоб не дублювати між list і pivot)
 const DateFilterMixin = (superclass) => class extends superclass {
     setup() {
         super.setup();
         this.notification = useService("notification");
         this.orm = useService("orm");
-        this.actionService = useService("action");
-        // Restore date filter state from action context (preserved across reloads)
-        const ctx = this.props.action?.context || {};
-        this.dateFilter = useState({
-            dateFrom: ctx.budget_date_from || "",
-            dateTo: ctx.budget_date_to || "",
-            budgetId: ctx.budget_id || 0,
-            budgetName: ctx.budget_name || "",
-        });
+        // Restore date filter state from sessionStorage (preserved across page reloads)
+        const saved = sessionStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            const s = JSON.parse(saved);
+            this.dateFilter = useState({
+                dateFrom: s.dateFrom || "",
+                dateTo: s.dateTo || "",
+                budgetId: s.budgetId || 0,
+                budgetName: s.budgetName || "",
+            });
+        } else {
+            this.dateFilter = useState({ dateFrom: "", dateTo: "", budgetId: 0, budgetName: "" });
+        }
         this.budgetOptions = useState({ list: [] });
         this.budgetModal = useState({ show: false });
+    }
+
+    _saveDateFilter() {
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+            dateFrom: this.dateFilter.dateFrom,
+            dateTo: this.dateFilter.dateTo,
+            budgetId: this.dateFilter.budgetId,
+            budgetName: this.dateFilter.budgetName,
+        }));
     }
 
     async onOpenBudgetModal() {
@@ -59,22 +74,6 @@ const DateFilterMixin = (superclass) => class extends superclass {
         this.dateFilter.dateTo = ev.target.value || "";
     }
 
-    async _reloadAction() {
-        // Reload the action via actionService to guarantee:
-        // 1. SearchModel re-applies default filters (search_default_filter_plan_general)
-        // 2. Model loads fresh data from the rebuilt SQL VIEW
-        // Pass date filter state as context so it's restored after reload.
-        await this.actionService.doAction("bio_budget.action_budget_fact_report", {
-            clearBreadcrumbs: true,
-            additionalContext: {
-                budget_date_from: this.dateFilter.dateFrom || false,
-                budget_date_to: this.dateFilter.dateTo || false,
-                budget_id: this.dateFilter.budgetId || 0,
-                budget_name: this.dateFilter.budgetName || "",
-            },
-        });
-    }
-
     async onDateFilterApply() {
         await this.orm.call(
             "budget.fact.report",
@@ -82,7 +81,8 @@ const DateFilterMixin = (superclass) => class extends superclass {
             [],
             { date_from: this.dateFilter.dateFrom || false, date_to: this.dateFilter.dateTo || false }
         );
-        await this._reloadAction();
+        this._saveDateFilter();
+        window.location.reload();
     }
 
     async onDateFilterClear() {
@@ -96,7 +96,8 @@ const DateFilterMixin = (superclass) => class extends superclass {
             [],
             { date_from: false, date_to: false }
         );
-        await this._reloadAction();
+        sessionStorage.removeItem(STORAGE_KEY);
+        window.location.reload();
     }
 };
 
