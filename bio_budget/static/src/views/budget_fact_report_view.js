@@ -52,13 +52,10 @@ const DateFilterMixin = (superclass) => class extends superclass {
     }
 
     async _reloadModel() {
-        // PivotModel uses model.load() directly; ListModel uses model.root.load()
-        if (this.model.root && typeof this.model.root.load === "function") {
-            await this.model.root.load();
-        } else {
-            await this.model.load(this.model.searchParams || {});
-        }
-        this.model.notify();
+        // Trigger the standard Odoo reload flow via SearchModel._notify().
+        // This preserves all active search filters (domain, groupBy, etc.)
+        // because SearchModel re-sends the full searchParams to the model.
+        this.env.searchModel._notify();
     }
 
     async onDateFilterApply() {
