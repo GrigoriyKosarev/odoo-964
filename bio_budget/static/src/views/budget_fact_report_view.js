@@ -21,7 +21,7 @@ const DateFilterMixin = (superclass) => class extends superclass {
 
     async onOpenBudgetModal() {
         this.budgetOptions.list = await this.orm.searchRead(
-            "crossovered.budget", [], ["name"], { order: "name" }
+            "crossovered.budget", [], ["name", "date_from", "date_to"], { order: "name" }
         );
         this.budgetModal.show = true;
     }
