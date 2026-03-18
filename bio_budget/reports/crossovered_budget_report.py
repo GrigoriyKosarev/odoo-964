@@ -34,7 +34,12 @@ class BudgetFactReport(models.Model):
     def web_search_read(self, *args, **kwargs):
         _logger.info("web_search_read called: args=%s, kwargs=%s", args, kwargs)
         result = super().web_search_read(*args, **kwargs)
-        _logger.info("web_search_read result: length=%s", result.get('length', '?') if isinstance(result, dict) else '?')
+        if isinstance(result, dict):
+            records = result.get('records', [])
+            ids = [r.get('id') for r in records[:5]]
+            plans = [r.get('plan_name', r.get('plan_id', '?')) for r in records[:5]]
+            _logger.info("web_search_read result: length=%s, first_5_ids=%s, first_5_plans=%s",
+                         result.get('length', '?'), ids, plans)
         return result
 
     def init(self):
