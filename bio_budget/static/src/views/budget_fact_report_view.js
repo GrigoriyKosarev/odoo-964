@@ -14,7 +14,15 @@ const DateFilterMixin = (superclass) => class extends superclass {
         super.setup();
         this.notification = useService("notification");
         this.orm = useService("orm");
-        this.dateFilter = useState({ dateFrom: "", dateTo: "", budgetId: 0, budgetName: "" });
+        this.actionService = useService("action");
+        // Restore date filter state from action context (preserved across reloads)
+        const ctx = this.props.action?.context || {};
+        this.dateFilter = useState({
+            dateFrom: ctx.budget_date_from || "",
+            dateTo: ctx.budget_date_to || "",
+            budgetId: ctx.budget_id || 0,
+            budgetName: ctx.budget_name || "",
+        });
         this.budgetOptions = useState({ list: [] });
         this.budgetModal = useState({ show: false });
     }
@@ -51,27 +59,31 @@ const DateFilterMixin = (superclass) => class extends superclass {
         this.dateFilter.dateTo = ev.target.value || "";
     }
 
-    async _reloadModel() {
-        // Get current search params from SearchModel to preserve active filters
-        // (e.g. "Plan: General" default filter domain)
-        const sm = this.env.searchModel;
-        await this.model.load({
-            domain: sm.domain,
-            context: sm.context,
-            groupBy: sm.groupBy,
+    async _reloadAction() {
+        // Reload the action via actionService to guarantee:
+        // 1. SearchModel re-applies default filters (search_default_filter_plan_general)
+        // 2. Model loads fresh data from the rebuilt SQL VIEW
+        // Pass date filter state as context so it's restored after reload.
+        const actionId = this.props.action?.id;
+        await this.actionService.doAction(actionId, {
+            clearBreadcrumbs: true,
+            additionalContext: {
+                budget_date_from: this.dateFilter.dateFrom || false,
+                budget_date_to: this.dateFilter.dateTo || false,
+                budget_id: this.dateFilter.budgetId || 0,
+                budget_name: this.dateFilter.budgetName || "",
+            },
         });
-        this.model.notify();
     }
 
     async onDateFilterApply() {
-        console.log("=== [JS] onDateFilterApply:", this.dateFilter.dateFrom, this.dateFilter.dateTo);
         await this.orm.call(
             "budget.fact.report",
             "apply_date_filter",
             [],
             { date_from: this.dateFilter.dateFrom || false, date_to: this.dateFilter.dateTo || false }
         );
-        await this._reloadModel();
+        await this._reloadAction();
     }
 
     async onDateFilterClear() {
@@ -79,14 +91,13 @@ const DateFilterMixin = (superclass) => class extends superclass {
         this.dateFilter.dateTo = "";
         this.dateFilter.budgetId = 0;
         this.dateFilter.budgetName = "";
-        console.log("=== [JS] onDateFilterClear");
         await this.orm.call(
             "budget.fact.report",
             "apply_date_filter",
             [],
             { date_from: false, date_to: false }
         );
-        await this._reloadModel();
+        await this._reloadAction();
     }
 };
 
