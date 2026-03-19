@@ -6,6 +6,8 @@ import { ListController } from "@web/views/list/list_controller";
 import { pivotView } from "@web/views/pivot/pivot_view";
 import { PivotController } from "@web/views/pivot/pivot_controller";
 import { useService } from "@web/core/utils/hooks";
+import { DateTimeInput } from "@web/core/datetime/datetime_input";
+import { serializeDate, deserializeDate } from "@web/core/l10n/dates";
 const { useState, onMounted } = owl;
 
 const STORAGE_KEY = "budget_fact_report_filter";
@@ -31,6 +33,9 @@ function loadFilterState() {
 
 // Mixin з логікою дат-фільтра (щоб не дублювати між list і pivot)
 const DateFilterMixin = (superclass) => class extends superclass {
+    static template = superclass.template;
+    static components = { ...superclass.components, DateTimeInput };
+
     setup() {
         super.setup();
         this.notification = useService("notification");
@@ -80,12 +85,20 @@ const DateFilterMixin = (superclass) => class extends superclass {
         this.budgetModal.show = false;
     }
 
-    onDateFromChanged(ev) {
-        this.dateFilter.dateFrom = ev.target.value || "";
+    get dateFromDT() {
+        return this.dateFilter.dateFrom ? deserializeDate(this.dateFilter.dateFrom) : false;
     }
 
-    onDateToChanged(ev) {
-        this.dateFilter.dateTo = ev.target.value || "";
+    get dateToDT() {
+        return this.dateFilter.dateTo ? deserializeDate(this.dateFilter.dateTo) : false;
+    }
+
+    onDateFromChanged(dt) {
+        this.dateFilter.dateFrom = dt ? serializeDate(dt) : "";
+    }
+
+    onDateToChanged(dt) {
+        this.dateFilter.dateTo = dt ? serializeDate(dt) : "";
     }
 
     async _rebuildAndReload(dateFrom, dateTo) {
