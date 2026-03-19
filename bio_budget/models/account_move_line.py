@@ -81,7 +81,8 @@ class AccountMoveLine(models.Model):
             # ---------------------------
             # 2. Subtotal
             # ---------------------------
-            subtotal = line.price_subtotal
+            # subtotal = line.price_subtotal
+            subtotal = abs(line.balance)
 
             # ---------------------------
             # 3. Generate combinations
