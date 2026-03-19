@@ -8,7 +8,26 @@ import { PivotController } from "@web/views/pivot/pivot_controller";
 import { useService } from "@web/core/utils/hooks";
 const { useState, onMounted } = owl;
 
-const LOG_PREFIX = "[BudgetFilter]";
+const STORAGE_KEY = "budget_fact_report_filter";
+
+function saveFilterState(state) {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+        dateFrom: state.dateFrom || "",
+        dateTo: state.dateTo || "",
+        budgetId: state.budgetId || 0,
+        budgetName: state.budgetName || "",
+    }));
+}
+
+function loadFilterState() {
+    try {
+        const raw = sessionStorage.getItem(STORAGE_KEY);
+        if (raw) {
+            return JSON.parse(raw);
+        }
+    } catch (e) { /* ignore */ }
+    return { dateFrom: "", dateTo: "", budgetId: 0, budgetName: "" };
+}
 
 // Mixin з логікою дат-фільтра (щоб не дублювати між list і pivot)
 const DateFilterMixin = (superclass) => class extends superclass {
@@ -16,34 +35,21 @@ const DateFilterMixin = (superclass) => class extends superclass {
         super.setup();
         this.notification = useService("notification");
         this.orm = useService("orm");
-        this.dateFilter = useState({ dateFrom: "", dateTo: "", budgetId: 0, budgetName: "" });
+
+        const saved = loadFilterState();
+        this.dateFilter = useState({
+            dateFrom: saved.dateFrom,
+            dateTo: saved.dateTo,
+            budgetId: saved.budgetId,
+            budgetName: saved.budgetName,
+        });
         this.budgetOptions = useState({ list: [] });
         this.budgetModal = useState({ show: false });
 
-        console.log(LOG_PREFIX, "setup() called");
-        console.log(LOG_PREFIX, "this.model =", this.model);
-        console.log(LOG_PREFIX, "this.model constructor =", this.model?.constructor?.name);
-        console.log(LOG_PREFIX, "this.model.searchParams =", this.model?.searchParams);
-        console.log(LOG_PREFIX, "this.model.root =", this.model?.root);
-        console.log(LOG_PREFIX, "this.env.searchModel =", this.env?.searchModel);
-
-        // Dump all model keys for debugging
-        if (this.model) {
-            console.log(LOG_PREFIX, "this.model keys =", Object.keys(this.model));
-            console.log(LOG_PREFIX, "this.model proto keys =", Object.getOwnPropertyNames(Object.getPrototypeOf(this.model)));
-        }
-
-        onMounted(() => {
-            console.log(LOG_PREFIX, "onMounted() - model state after mount:");
-            console.log(LOG_PREFIX, "  model.searchParams =", JSON.stringify(this.model?.searchParams));
-            console.log(LOG_PREFIX, "  model.root =", this.model?.root);
-            console.log(LOG_PREFIX, "  model.root?.data =", this.model?.root?.data);
-            if (this.env.searchModel) {
-                console.log(LOG_PREFIX, "  searchModel.domain =", JSON.stringify(this.env.searchModel.domain));
-                console.log(LOG_PREFIX, "  searchModel.context =", JSON.stringify(this.env.searchModel.context));
-                console.log(LOG_PREFIX, "  searchModel.groupBy =", JSON.stringify(this.env.searchModel.groupBy));
-                console.log(LOG_PREFIX, "  searchModel keys =", Object.keys(this.env.searchModel));
-                console.log(LOG_PREFIX, "  searchModel proto keys =", Object.getOwnPropertyNames(Object.getPrototypeOf(this.env.searchModel)));
+        onMounted(async () => {
+            // If we have saved filter state, rebuild the VIEW to match
+            if (this.dateFilter.dateFrom || this.dateFilter.dateTo || this.dateFilter.budgetId) {
+                await this._rebuildAndReload(this.dateFilter.dateFrom, this.dateFilter.dateTo);
             }
         });
     }
@@ -61,11 +67,13 @@ const DateFilterMixin = (superclass) => class extends superclass {
         this.dateFilter.dateFrom = date_from;
         this.dateFilter.dateTo = date_to;
         this.budgetModal.show = false;
+        saveFilterState(this.dateFilter);
     }
 
     onClearBudget() {
         this.dateFilter.budgetId = 0;
         this.dateFilter.budgetName = "";
+        saveFilterState(this.dateFilter);
     }
 
     onCloseBudgetModal() {
@@ -74,43 +82,20 @@ const DateFilterMixin = (superclass) => class extends superclass {
 
     onDateFromChanged(ev) {
         this.dateFilter.dateFrom = ev.target.value || "";
-        console.log(LOG_PREFIX, "onDateFromChanged:", this.dateFilter.dateFrom);
     }
 
     onDateToChanged(ev) {
         this.dateFilter.dateTo = ev.target.value || "";
-        console.log(LOG_PREFIX, "onDateToChanged:", this.dateFilter.dateTo);
     }
 
     async _rebuildAndReload(dateFrom, dateTo) {
-        console.log(LOG_PREFIX, "=== _rebuildAndReload START ===");
-        console.log(LOG_PREFIX, "  dateFrom =", dateFrom, "dateTo =", dateTo);
-
-        // 1. Dump current state BEFORE rebuild
-        console.log(LOG_PREFIX, "  BEFORE rebuild:");
-        console.log(LOG_PREFIX, "    model =", this.model);
-        console.log(LOG_PREFIX, "    model.constructor =", this.model?.constructor?.name);
-        console.log(LOG_PREFIX, "    model.searchParams =", JSON.stringify(this.model?.searchParams));
-        console.log(LOG_PREFIX, "    model.root =", this.model?.root);
-        console.log(LOG_PREFIX, "    model.root?.records?.length =", this.model?.root?.records?.length);
-        if (this.env.searchModel) {
-            console.log(LOG_PREFIX, "    searchModel.domain =", JSON.stringify(this.env.searchModel.domain));
-            console.log(LOG_PREFIX, "    searchModel.context =", JSON.stringify(this.env.searchModel.context));
-            console.log(LOG_PREFIX, "    searchModel.groupBy =", JSON.stringify(this.env.searchModel.groupBy));
-            console.log(LOG_PREFIX, "    searchModel.orderBy =", JSON.stringify(this.env.searchModel.orderBy));
-        }
-
-        // 2. Rebuild SQL VIEW on server
-        console.log(LOG_PREFIX, "  Calling apply_date_filter on server...");
-        const rpcResult = await this.orm.call(
+        await this.orm.call(
             "budget.fact.report",
             "apply_date_filter",
             [],
             { date_from: dateFrom || false, date_to: dateTo || false, budget_id: this.dateFilter.budgetId || false }
         );
-        console.log(LOG_PREFIX, "  apply_date_filter returned:", rpcResult);
 
-        // 3. Build searchParams from SearchModel (current filters)
         const searchModel = this.env.searchModel;
         const reloadParams = {
             domain: searchModel.domain,
@@ -118,64 +103,35 @@ const DateFilterMixin = (superclass) => class extends superclass {
             groupBy: searchModel.groupBy,
             orderBy: searchModel.orderBy || [],
         };
-        console.log(LOG_PREFIX, "  reloadParams from searchModel =", JSON.stringify(reloadParams));
 
-        // 4. Try to reload model
-        console.log(LOG_PREFIX, "  Attempting model.load()...");
-        try {
-            if (typeof this.model.load === "function") {
-                console.log(LOG_PREFIX, "    Using this.model.load(reloadParams)");
-                await this.model.load(reloadParams);
-                console.log(LOG_PREFIX, "    model.load() succeeded");
-            } else if (this.model.root && typeof this.model.root.load === "function") {
-                console.log(LOG_PREFIX, "    Using this.model.root.load(reloadParams)");
-                await this.model.root.load(reloadParams);
-                console.log(LOG_PREFIX, "    model.root.load() succeeded");
-            } else {
-                console.error(LOG_PREFIX, "    NO load() method found on model or model.root!");
-                console.log(LOG_PREFIX, "    model keys:", Object.keys(this.model));
-                if (this.model.root) {
-                    console.log(LOG_PREFIX, "    model.root keys:", Object.keys(this.model.root));
-                }
-            }
-        } catch (loadErr) {
-            console.error(LOG_PREFIX, "  model.load() FAILED:", loadErr);
-            console.error(LOG_PREFIX, "  Error details:", loadErr.message, loadErr.stack);
-            throw loadErr;
+        if (typeof this.model.load === "function") {
+            await this.model.load(reloadParams);
+        } else if (this.model.root && typeof this.model.root.load === "function") {
+            await this.model.root.load(reloadParams);
         }
 
-        // 5. Notify
-        console.log(LOG_PREFIX, "  Calling model.notify()...");
         this.model.notify();
-
-        // 6. Dump state AFTER
-        console.log(LOG_PREFIX, "  AFTER rebuild:");
-        console.log(LOG_PREFIX, "    model.searchParams =", JSON.stringify(this.model?.searchParams));
-        console.log(LOG_PREFIX, "    model.root?.records?.length =", this.model?.root?.records?.length);
-        console.log(LOG_PREFIX, "=== _rebuildAndReload END ===");
     }
 
     async onDateFilterApply() {
-        console.log(LOG_PREFIX, "onDateFilterApply clicked, dateFilter =", JSON.stringify(this.dateFilter));
         try {
             await this._rebuildAndReload(this.dateFilter.dateFrom, this.dateFilter.dateTo);
+            saveFilterState(this.dateFilter);
             this.notification.add("Filter applied", { type: "success" });
         } catch (e) {
-            console.error(LOG_PREFIX, "onDateFilterApply ERROR:", e);
             this.notification.add(`Filter error: ${e.message || String(e)}`, { type: "danger", sticky: true });
         }
     }
 
     async onDateFilterClear() {
-        console.log(LOG_PREFIX, "onDateFilterClear clicked");
         this.dateFilter.dateFrom = "";
         this.dateFilter.dateTo = "";
         this.dateFilter.budgetId = 0;
         this.dateFilter.budgetName = "";
+        saveFilterState(this.dateFilter);
         try {
             await this._rebuildAndReload(false, false);
         } catch (e) {
-            console.error(LOG_PREFIX, "onDateFilterClear ERROR:", e);
             this.notification.add(`Clear error: ${e.message || String(e)}`, { type: "danger", sticky: true });
         }
     }

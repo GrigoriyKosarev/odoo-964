@@ -30,23 +30,10 @@ class BudgetFactReport(models.Model):
     fact = fields.Float(string="Budget Fact")
     diff = fields.Float(string="Diff")
 
-    @api.model
-    def web_search_read(self, *args, **kwargs):
-        _logger.info("web_search_read called: args=%s, kwargs=%s", args, kwargs)
-        result = super().web_search_read(*args, **kwargs)
-        if isinstance(result, dict):
-            records = result.get('records', [])
-            ids = [r.get('id') for r in records[:5]]
-            plans = [r.get('plan_name', r.get('plan_id', '?')) for r in records[:5]]
-            _logger.info("web_search_read result: length=%s, first_5_ids=%s, first_5_plans=%s",
-                         result.get('length', '?'), ids, plans)
-        return result
-
     def init(self):
         self._rebuild_view()
 
     def _rebuild_view(self, date_from=None, date_to=None, budget_id=None):
-        _logger.info("_rebuild_view called: date_from=%s, date_to=%s, budget_id=%s", date_from, date_to, budget_id)
         where_plan = ""
         where_fact = ""
         params_plan = []
@@ -65,9 +52,6 @@ class BudgetFactReport(models.Model):
             params_plan.append(date_to)
             params_fact.append(date_to)
         params = params_plan + params_fact
-
-        _logger.info("_rebuild_view: where_plan='%s', where_fact='%s', params=%s",
-                      where_plan, where_fact, params)
 
         tools.drop_view_if_exists(self.env.cr, self._table)
 
@@ -115,18 +99,11 @@ class BudgetFactReport(models.Model):
             GROUP BY analytic_account_id, account_id, aaa.plan_id, aap.name, aaa.account_cluster_id, aaa.account_business_unit_id, aaa.account_brand_id
         """ % (self._table, where_plan, where_fact)
 
-        _logger.info("_rebuild_view: executing SQL (length=%d)", len(query))
         self.env.cr.execute(query, params)
-
-        # Verify: count rows in rebuilt view
-        self.env.cr.execute("SELECT count(*) FROM %s" % self._table)
-        row_count = self.env.cr.fetchone()[0]
-        _logger.info("_rebuild_view: view rebuilt OK, row_count=%d", row_count)
 
     @api.model
     def apply_date_filter(self, date_from=False, date_to=False, budget_id=False):
         """Called from JS to rebuild the SQL VIEW with date/budget filters."""
-        _logger.info("apply_date_filter: date_from=%s, date_to=%s, budget_id=%s", date_from, date_to, budget_id)
         date_re = re.compile(r'^\d{4}-\d{2}-\d{2}$')
         if date_from and not date_re.match(date_from):
             date_from = False
