@@ -65,9 +65,9 @@ class AccountMove(models.Model):
                     continue
 
                 # ---------------------------
-                # 2. subtotal сума рядка
+                # 2. subtotal сума рядка (у валюті компанії, як і analytic.amount)
                 # ---------------------------
-                subtotal = line.price_subtotal
+                subtotal = abs(line.balance)
                 # ---------------------------
                 # 3. Попереднє накопичення
                 # ---------------------------
