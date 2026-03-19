@@ -8,11 +8,11 @@
         <xpath expr="//div[hasclass('o_list_buttons')]" position="after">
             <div class="d-flex align-items-center gap-2 ms-2 mt-2">
                 <label class="mb-0 fw-bold">Date from:</label>
-                <input type="date" class="form-control form-control-sm" style="width: auto;"
+                <input type="date" lang="en" class="form-control form-control-sm" style="width: auto;"
                        t-att-value="dateFilter.dateFrom"
                        t-on-change="onDateFromChanged" />
                 <label class="mb-0 fw-bold">to:</label>
-                <input type="date" class="form-control form-control-sm" style="width: auto;"
+                <input type="date" lang="en" class="form-control form-control-sm" style="width: auto;"
                        t-att-value="dateFilter.dateTo"
                        t-on-change="onDateToChanged" />
                 <label class="mb-0 fw-bold">Budget:</label>
