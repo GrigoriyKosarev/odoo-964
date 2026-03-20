@@ -90,20 +90,16 @@ class AccountMoveLine(models.Model):
             results = []
             total_amount_calc = 0.0
 
-            # Determine sign from analytic amounts (negative for costs)
-            first_amt = (clusters or bus or brands)[0][1]
-            sign = -1 if first_amt < 0 else 1
-
             if clusters and bus and brands:
                 # Three types: Cluster x Business Unit x Brand
                 for c_acc, c_amt in clusters:
-                    c_pct = abs(c_amt) / subtotal if subtotal else 0
+                    c_pct = c_amt / subtotal if subtotal else 0
                     for b_acc, b_amt in bus:
-                        b_pct = abs(b_amt) / subtotal if subtotal else 0
+                        b_pct = b_amt / subtotal if subtotal else 0
                         for r_acc, r_amt in brands:
-                            r_pct = abs(r_amt) / subtotal if subtotal else 0
+                            r_pct = r_amt / subtotal if subtotal else 0
                             combined_pct = c_pct * b_pct * r_pct
-                            combined_amount = sign * subtotal * combined_pct
+                            combined_amount = subtotal * combined_pct
                             total_amount_calc += combined_amount
 
                             combined_acc = move._find_or_create_combined_account(
@@ -116,11 +112,11 @@ class AccountMoveLine(models.Model):
 
             elif clusters and bus:
                 for c_acc, c_amt in clusters:
-                    c_pct = abs(c_amt) / subtotal if subtotal else 0
+                    c_pct = c_amt / subtotal if subtotal else 0
                     for b_acc, b_amt in bus:
-                        b_pct = abs(b_amt) / subtotal if subtotal else 0
+                        b_pct = b_amt / subtotal if subtotal else 0
                         combined_pct = c_pct * b_pct
-                        combined_amount = sign * subtotal * combined_pct
+                        combined_amount = subtotal * combined_pct
                         total_amount_calc += combined_amount
 
                         combined_acc = move._find_or_create_combined_account(
@@ -133,11 +129,11 @@ class AccountMoveLine(models.Model):
 
             elif clusters and brands:
                 for c_acc, c_amt in clusters:
-                    c_pct = abs(c_amt) / subtotal if subtotal else 0
+                    c_pct = c_amt / subtotal if subtotal else 0
                     for r_acc, r_amt in brands:
-                        r_pct = abs(r_amt) / subtotal if subtotal else 0
+                        r_pct = r_amt / subtotal if subtotal else 0
                         combined_pct = c_pct * r_pct
-                        combined_amount = sign * subtotal * combined_pct
+                        combined_amount = subtotal * combined_pct
                         total_amount_calc += combined_amount
 
                         combined_acc = move._find_or_create_combined_account(
@@ -150,11 +146,11 @@ class AccountMoveLine(models.Model):
 
             elif bus and brands:
                 for b_acc, b_amt in bus:
-                    b_pct = abs(b_amt) / subtotal if subtotal else 0
+                    b_pct = b_amt / subtotal if subtotal else 0
                     for r_acc, r_amt in brands:
-                        r_pct = abs(r_amt) / subtotal if subtotal else 0
+                        r_pct = r_amt / subtotal if subtotal else 0
                         combined_pct = b_pct * r_pct
-                        combined_amount = sign * subtotal * combined_pct
+                        combined_amount = subtotal * combined_pct
                         total_amount_calc += combined_amount
 
                         combined_acc = move._find_or_create_combined_account(
@@ -167,7 +163,7 @@ class AccountMoveLine(models.Model):
 
             elif clusters:
                 for c_acc, c_amt in clusters:
-                    c_pct = abs(c_amt) / subtotal if subtotal else 0
+                    c_pct = c_amt / subtotal if subtotal else 0
                     combined_amount = c_amt
                     total_amount_calc += combined_amount
 
@@ -181,7 +177,7 @@ class AccountMoveLine(models.Model):
 
             elif bus:
                 for b_acc, b_amt in bus:
-                    b_pct = abs(b_amt) / subtotal if subtotal else 0
+                    b_pct = b_amt / subtotal if subtotal else 0
                     combined_amount = b_amt
                     total_amount_calc += combined_amount
 
@@ -195,7 +191,7 @@ class AccountMoveLine(models.Model):
 
             elif brands:
                 for r_acc, r_amt in brands:
-                    r_pct = abs(r_amt) / subtotal if subtotal else 0
+                    r_pct = r_amt / subtotal if subtotal else 0
                     combined_amount = r_amt
                     total_amount_calc += combined_amount
 
@@ -210,7 +206,7 @@ class AccountMoveLine(models.Model):
             # ---------------------------
             # 4. Rounding correction
             # ---------------------------
-            diff = (sign * subtotal) - total_amount_calc
+            diff = subtotal - total_amount_calc
             if results:
                 results[-1]["amount"] += diff
 
