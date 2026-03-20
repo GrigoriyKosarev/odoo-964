@@ -173,14 +173,18 @@ class AccountMove(models.Model):
                 results = []
                 total_amount_calc = 0.0
 
+                # Determine sign from analytic amounts (negative for costs)
+                first_amt = (clusters or bus or brands)[0][1]
+                sign = -1 if first_amt < 0 else 1
+
                 if clusters and bus:
                     # Two types: Cluster x Business Unit, Brand = Null
                     for c_acc, c_amt in clusters:
-                        c_pct = c_amt / subtotal if subtotal else 0
+                        c_pct = abs(c_amt) / subtotal if subtotal else 0
                         for b_acc, b_amt in bus:
-                            b_pct = b_amt / subtotal if subtotal else 0
+                            b_pct = abs(b_amt) / subtotal if subtotal else 0
                             combined_pct = c_pct * b_pct
-                            combined_amount = subtotal * combined_pct
+                            combined_amount = sign * subtotal * combined_pct
                             total_amount_calc += combined_amount
 
                             combined_acc = self._find_or_create_combined_account(
@@ -194,11 +198,11 @@ class AccountMove(models.Model):
                 elif clusters and brands:
                     # Two types: Cluster x Brand, Business Unit = Null
                     for c_acc, c_amt in clusters:
-                        c_pct = c_amt / subtotal if subtotal else 0
+                        c_pct = abs(c_amt) / subtotal if subtotal else 0
                         for r_acc, r_amt in brands:
-                            r_pct = r_amt / subtotal if subtotal else 0
+                            r_pct = abs(r_amt) / subtotal if subtotal else 0
                             combined_pct = c_pct * r_pct
-                            combined_amount = subtotal * combined_pct
+                            combined_amount = sign * subtotal * combined_pct
                             total_amount_calc += combined_amount
 
                             combined_acc = self._find_or_create_combined_account(
@@ -212,11 +216,11 @@ class AccountMove(models.Model):
                 elif bus and brands:
                     # Two types: Business Unit x Brand, Cluster = Null
                     for b_acc, b_amt in bus:
-                        b_pct = b_amt / subtotal if subtotal else 0
+                        b_pct = abs(b_amt) / subtotal if subtotal else 0
                         for r_acc, r_amt in brands:
-                            r_pct = r_amt / subtotal if subtotal else 0
+                            r_pct = abs(r_amt) / subtotal if subtotal else 0
                             combined_pct = b_pct * r_pct
-                            combined_amount = subtotal * combined_pct
+                            combined_amount = sign * subtotal * combined_pct
                             total_amount_calc += combined_amount
 
                             combined_acc = self._find_or_create_combined_account(
@@ -230,7 +234,7 @@ class AccountMove(models.Model):
                 elif clusters:
                     # Single type: Cluster only
                     for c_acc, c_amt in clusters:
-                        c_pct = c_amt / subtotal if subtotal else 0
+                        c_pct = abs(c_amt) / subtotal if subtotal else 0
                         combined_amount = c_amt
                         total_amount_calc += combined_amount
 
@@ -245,7 +249,7 @@ class AccountMove(models.Model):
                 elif bus:
                     # Single type: Business Unit only
                     for b_acc, b_amt in bus:
-                        b_pct = b_amt / subtotal if subtotal else 0
+                        b_pct = abs(b_amt) / subtotal if subtotal else 0
                         combined_amount = b_amt
                         total_amount_calc += combined_amount
 
@@ -260,7 +264,7 @@ class AccountMove(models.Model):
                 elif brands:
                     # Single type: Brand only
                     for r_acc, r_amt in brands:
-                        r_pct = r_amt / subtotal if subtotal else 0
+                        r_pct = abs(r_amt) / subtotal if subtotal else 0
                         combined_amount = r_amt
                         total_amount_calc += combined_amount
 
@@ -275,7 +279,7 @@ class AccountMove(models.Model):
                 # ---------------------------
                 # 4. Rounding correction
                 # ---------------------------
-                diff = subtotal - total_amount_calc
+                diff = (sign * subtotal) - total_amount_calc
                 if results:
                     results[-1]["amount"] += diff
 
